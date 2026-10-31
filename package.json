@@ -1,0 +1,11 @@
+{
+  "name": "workterm",
+  "private": true,
+  "workspaces": ["apps/api", "apps/web"],
+  "scripts": {
+    "dev": "bun run dev.ts",
+    "check": "bun run --cwd apps/api check && bun run --cwd apps/web check",
+    "test": "bun run --cwd apps/api test",
+    "deploy:staging": "bun run --cwd apps/api deploy:staging"
+  }
+}
