@@ -50,3 +50,16 @@ Start with 1, 3 and 6. They show the pain, the list and the email in that order,
 - Which school and city do you want to name in the first videos?
 - Will you use hook 9 only after you have a real result?
 - CASL (Canadian anti-spam law) still needs a check before we send any real email. Videos and the waitlist do not send email, so they are fine.
+
+## Playbook chapter 00 checklist: where we are
+
+1. **Groups you can reach (HUMAN):** not done. Johnathan lists 5 groups, for example school clubs, co-op Discords, Reddit communities.
+2. **What they paste into ChatGPT (HUMAN):** not done. Ask 5 students. Likely answer: "write me a cold email to this company".
+3. **Low-star reviews of top apps:** started, thin. See the findings above. Still needs a hand check of App Store and Google Play pages.
+4. **TikTok and Reels search:** not done. Needs a real account. Look for "what app is this?" under co-op and internship videos.
+5. **Subreddits with recurring complaints:** done at a first pass (r/leetcode, r/EngineeringResumes, r/CarletonU, r/Dalhousie).
+6. **Unbundle one slow feature of a big app:** our version is "find the firms nobody posts jobs for". Job boards only show posted jobs.
+7. **Localize for a market the leader ignores:** Offerloop and Whali aim at banking, consulting and tech. We aim at small Canadian engineering firms.
+8. **One-week test:** the waitlist page is built locally. Deploy needs a Cloudflare account (HUMAN). The 10 hooks are written. Videos still need posting.
+9. **Math check:** 30% trial start x 30% trial to paid x $30 = $2.70 per download. At $35 it is $3.15. Caution: our plan is free matches plus 5 emails, not a trial, so the two 30% numbers are guesses until the waitlist gives real data. Paid ads only work if one download costs less than this. Organic videos cost nothing per download.
+10. **One-liner:** "For Canadian engineering co-op students, Workterm turns your school, program and city into a list of local firms and a drafted email for each, in about a minute." (Confirm the time once the product exists.)
