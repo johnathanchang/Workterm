@@ -9,18 +9,18 @@ const source = new URLSearchParams(window.location.search).get("src")?.slice(0, 
 const STEPS = [
   {
     n: "01",
-    title: "Find the hidden firms",
-    body: "Small and mid-size engineering firms near you that hire co-ops but never post the job.",
+    title: "Find the hidden companies",
+    body: "Small and mid-size engineering companies near you that hire co-ops but never post the job.",
   },
   {
     n: "02",
     title: "Send emails that get answers",
-    body: "Workterm writes a short, personal email for each firm. You read it, edit it, and approve it.",
+    body: "Workterm writes a short, personal email for each company. You read it, edit it, and approve it.",
   },
   {
     n: "03",
     title: "Know what to work on",
-    body: "See the skills and projects that make a firm say yes, then build them before term starts.",
+    body: "See the skills and projects that make a company say yes, then build them before term starts.",
   },
 ];
 
@@ -69,7 +69,7 @@ export default function App() {
             Land the co-op <em>nobody posts.</em>
           </h1>
           <p className="lead">
-            Most engineering co-ops never reach a job board. Workterm finds the local firms that hire anyway, writes
+            Most engineering co-ops never reach a job board. Workterm finds the local companies that hire anyway, writes
             your emails, and tells you what to work on to get hired.
           </p>
 
@@ -143,7 +143,7 @@ export default function App() {
       </main>
 
       <footer>
-        <p>Workterm helps you reach firms. It does not promise a placement.</p>
+        <p>Workterm helps you reach companies. It does not promise a placement.</p>
       </footer>
     </>
   );

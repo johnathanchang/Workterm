@@ -13,6 +13,7 @@ We are in Phase 0, before Gate A. The only code so far is the waitlist server in
 
 - Use plain, simple English. Short sentences.
 - Define every technical term the first time you use it.
+- Say "company", not "firm", in user-facing text and when talking to Johnathan. Code names like `firm_matched` stay as they are for now.
 - For each step, say why it matters for three things: vibe coding (building with AI), AI tools, and go-to-market (getting users and revenue).
 - Never use em dashes or double hyphens. Use a single en dash (–) instead.
 - No profanity.
