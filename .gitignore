@@ -8,3 +8,5 @@ build/
 .wrangler/
 .vercel/
 *.log
+.dev.vars*
+!.dev.vars.example

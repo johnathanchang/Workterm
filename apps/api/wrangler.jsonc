@@ -1,0 +1,36 @@
+// Starter config for apps/api. Local dev works as is.
+// Before the first deploy (human step): create the databases and paste the real ids.
+//   wrangler d1 create workterm-db-staging
+//   wrangler d1 create workterm-db
+// Production deploys are humans only.
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "workterm-api",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-10-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "observability": { "enabled": true },
+
+  // Local dev. The id is a placeholder; wrangler dev uses a local copy of the database.
+  "d1_databases": [
+    { "binding": "DB", "database_name": "workterm-db-dev", "database_id": "local-dev-placeholder", "migrations_dir": "migrations" }
+  ],
+  "vars": { "APP_ENV": "dev", "WEB_ORIGIN": "http://localhost:5173" },
+
+  "env": {
+    "staging": {
+      "name": "workterm-api-staging",
+      "d1_databases": [
+        { "binding": "DB", "database_name": "workterm-db-staging", "database_id": "<paste-staging-id>", "migrations_dir": "migrations" }
+      ],
+      "vars": { "APP_ENV": "staging", "WEB_ORIGIN": "https://staging.<domain>" }
+    },
+    "production": {
+      "name": "workterm-api",
+      "d1_databases": [
+        { "binding": "DB", "database_name": "workterm-db", "database_id": "<paste-production-id>", "migrations_dir": "migrations" }
+      ],
+      "vars": { "APP_ENV": "production", "WEB_ORIGIN": "https://<domain>" }
+    }
+  }
+}
