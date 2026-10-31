@@ -8,6 +8,11 @@ We are in Phase 0, before Gate A. Web first (decision 0001), so iOS and Android 
 - [x] **[AGENT]** Ask in one message: Who do you know or belong to? What do they paste into ChatGPT? What do they complain about? Which apps do they pay for?
 - [x] **[AGENT]** Propose 3 niches (chapter 00): one-liner, 2–3 reference apps, domain watch-outs, scorecard (7 criteria, 1–5 each). Niche chosen: Workterm, 30/35.
 - [ ] **[AGENT]** Top candidate: read competitors' 1–3★ App Store reviews, write 10 short-form video hooks, draft a waitlist site (Worker + D1).
+  - [x] Waitlist server built and tested locally (`apps/api`): `GET /health`, `POST /waitlist`, `POST /events`, D1 migration `0001_waitlist.sql`. `bun run check` and `bun test` pass.
+  - [ ] **[HUMAN]** Create a Cloudflare account, run `npx wrangler login`, then create the staging D1 database and paste its id into `apps/api/wrangler.jsonc`.
+  - [ ] Deploy the waitlist server to staging.
+  - [ ] Waitlist web page (`apps/web`) that calls `POST /waitlist` and `POST /events`.
+  - [ ] Read competitor reviews and write 10 video hooks.
 - [ ] **[HUMAN]** Post the videos and waitlist for one week.
 - [ ] **[AGENT]** Run chapter 12 unit economics at the human's price.
 - **Gate A, build only if:** scorecard ≥ 30/35 for us (playbook: 25) with no 1s · demand signal (saves, shares, "what app is this?", waitlist ≥ 10% of visitors) · revenue per download (chapter 12) well above cost per download.
