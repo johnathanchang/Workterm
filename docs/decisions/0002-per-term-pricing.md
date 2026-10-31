@@ -4,7 +4,7 @@ Status: accepted
 
 ## Decision
 
-Charge one price per co-op term, about $30 to $40. The free plan shows matches and lets students send 5 emails.
+Charge one price per co-op term: **$30 USD** (set by Johnathan on 2026-10-31; earlier idea was $30 to $40). The free plan shows matches and lets students send 5 emails.
 
 ## Why
 
