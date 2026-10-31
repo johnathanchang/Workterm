@@ -11,7 +11,7 @@ We are in Phase 0, before Gate A. Web first (decision 0001), so iOS and Android 
   - [x] Waitlist server built and tested locally (`apps/api`): `GET /health`, `POST /waitlist`, `POST /events`, D1 migration `0001_waitlist.sql`. `bun run check` and `bun test` pass.
   - [ ] **[HUMAN]** Create a Cloudflare account, run `npx wrangler login`, then create the staging D1 database and paste its id into `apps/api/wrangler.jsonc`.
   - [ ] Deploy the waitlist server to staging.
-  - [ ] Waitlist web page (`apps/web`) that calls `POST /waitlist` and `POST /events`.
+  - [x] Waitlist web page (`apps/web`, React + Vite) that calls `POST /waitlist` and `POST /events`. Checked in a real browser at desktop and phone width. Run both with `bun dev`, then open http://localhost:5173 (add `?src=tiktok` to tag the source).
   - [ ] Read competitor reviews and write 10 video hooks.
 - [ ] **[HUMAN]** Post the videos and waitlist for one week.
 - [ ] **[AGENT]** Run chapter 12 unit economics at the human's price.
