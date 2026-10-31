@@ -4,7 +4,7 @@
 
 ## App
 
-For Canadian engineering co-op students, Workterm finds local firms that don't post jobs, writes your emails, and tells you what to work on to get hired.
+For any student trying to land a co-op, Workterm builds a resume for each job, rates your resume against it, finds roles that fit you, and helps you apply to many at once. Decision 0003 widened the audience from Canadian engineering students.
 UX references: to pick in Phase 1 (chapter 09). Domain watch-outs: never promise a placement, spam rules (CASL), personal data in resumes and Gmail.
 Pricing: free to see matches plus 5 emails. Paid is one price per co-op term, about $30 to $40. Details in `docs/brief.md`.
 We are in Phase 0, before Gate A. The only code so far is the waitlist server in `apps/api` and the waitlist page in `apps/web`. Track status in `docs/progress.md`.

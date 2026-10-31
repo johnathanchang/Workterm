@@ -4,11 +4,11 @@
 
 ## One-liner
 
-For engineering co-op students, Workterm finds local firms that don't post jobs, writes your emails, and tells you what to work on to get hired.
+For any student trying to land a co-op, Workterm builds a resume for each job, rates your resume against it, finds roles that fit you, and helps you apply to many at once.
 
 ## Who it's for
 
-Canadian engineering co-op students who can't find a placement on their school's job board. Some programs require co-ops to graduate (some Waterloo programs need 5 to 6). Students report 100 to 235+ applications with little or no reply.
+Any student trying to land a co-op, in any program and at any school. Our first users are likely Canadian engineering students, but the product is not limited to them. They can't find a placement on their school's job board. Some programs require co-ops to graduate (some Waterloo programs need 5 to 6). Students report 100 to 235+ applications with little or no reply.
 
 ## Scorecard (our bar: 30/35, stricter than the playbook's 25)
 
@@ -24,15 +24,18 @@ Canadian engineering co-op students who can't find a placement on their school's
 ## Core loop
 
 1. Setup: resume, school, program, co-op term, city.
-2. Find firms: small and mid local engineering firms that don't post co-op jobs. Each has a match score and a one-line "why it fits you".
-3. Send emails: AI writes one personal email per firm. It sends from the student's own Gmail, paced, with follow-ups. The student approves each one first.
-4. Track replies: one inbox view, with AI-drafted responses.
-5. What to work on: compares the resume to what target firms do, suggests a skill or weekend project. Updates weekly.
+2. Find jobs: a search bar where the student pastes a resume or lists skills and gets roles ranked by how well they match. Includes small firms that don't post jobs. Each has a match score and a one-line "why it fits you".
+3. Personalized resumes: AI tailors a CV or resume for each job. The student rates it against the job, sees what is missing, and edits it.
+4. Apply to many: AI writes one personal email or application per job. It sends from the student's own Gmail, paced, with follow-ups. The student approves each one first.
+5. Track replies: one inbox view, with AI-drafted responses.
+6. What to work on: compares the resume to what target firms do, suggests a skill or weekend project. Updates weekly.
 
 ## v1 scope
 
 - Resume setup
-- Firm finder for one region (Toronto, Hamilton, Waterloo)
+- Resume rating against a job, and a tailored resume for each job
+- Job and firm search matched to the resume, for one region at first (Toronto, Hamilton, Waterloo)
+- Peer insights: which roles students like you applied to and what got replies, with names kept private
 - AI email drafts
 - Gmail sending with follow-ups
 - Reply tracker
@@ -41,7 +44,7 @@ Everything else is in `docs/later.md`.
 
 ## Competitors
 
-Offerloop and Whali target big companies (banking, consulting, tech). We target small local engineering firms, built around co-op terms, plus the skill coach.
+Offerloop and Whali target big companies (banking, consulting, tech). We cover any student's co-op search, built around co-op terms, with resume rating, tailored resumes, and a skill coach.
 
 ## Pricing
 
