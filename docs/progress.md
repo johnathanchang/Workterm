@@ -12,7 +12,7 @@ We are in Phase 0, before Gate A. Web first (decision 0001), so iOS and Android 
   - [ ] **[HUMAN]** Create a Cloudflare account, run `npx wrangler login`, then create the staging D1 database and paste its id into `apps/api/wrangler.jsonc`.
   - [ ] Deploy the waitlist server to staging.
   - [x] Waitlist web page (`apps/web`, React + Vite) that calls `POST /waitlist` and `POST /events`. Checked in a real browser at desktop and phone width. Run both with `bun dev`, then open http://localhost:5173 (add `?src=tiktok` to tag the source).
-  - [ ] Read competitor reviews and write 10 video hooks.
+  - [x] Read competitor reviews and write 10 video hooks. See `docs/validation.md`. Review evidence is thin; check App Store pages by hand.
 - [ ] **[HUMAN]** Post the videos and waitlist for one week.
 - [ ] **[AGENT]** Run chapter 12 unit economics at the human's price.
 - **Gate A, build only if:** scorecard ≥ 30/35 for us (playbook: 25) with no 1s · demand signal (saves, shares, "what app is this?", waitlist ≥ 10% of visitors) · revenue per download (chapter 12) well above cost per download.
