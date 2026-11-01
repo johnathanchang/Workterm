@@ -87,14 +87,20 @@ export default function Home() {
     <>
       <main>
         <section className="hero">
-          <p className="eyebrow">Resumes and CVs</p>
           <h1>
-            A resume built for <em>every job.</em>
+            Turn your student resume into your <em>dream co-op.</em>
           </h1>
           <p className="lead">
-            Upload the resume you have and tell us the jobs you want. Workterm rates your resume, finds jobs that fit
-            you, and makes a personalized CV for each one.
+            Workterm rewrites your resume to match each job posting, so you get more interviews in less time.
           </p>
+          <button
+            type="button"
+            className="cta"
+            onClick={() => document.getElementById("early-access")?.scrollIntoView({ behavior: "smooth" })}
+          >
+            Get early access
+          </button>
+          <p className="cta-note">Free to start. Join the list now and be first in when we open.</p>
         </section>
 
         <section className="steps" aria-label="What Workterm does">
