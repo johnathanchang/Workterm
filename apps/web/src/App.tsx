@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react";
+import { MouseEvent, useEffect, useState } from "react";
 import Home from "./Home";
 import Login from "./Login";
 import Onboarding from "./Onboarding";
+import Refund from "./Refund";
 
 // Tiny hash router: #/login and #/signup. No router library needed yet.
 function useRoute(): string {
@@ -21,6 +22,15 @@ function useRoute(): string {
 export default function App() {
   const route = useRoute();
 
+  // FAQ lives on the home page. From any other page, go home first, then scroll.
+  function goToFaq(e: MouseEvent<HTMLAnchorElement>) {
+    e.preventDefault();
+    const scroll = () => document.getElementById("faq")?.scrollIntoView({ behavior: "smooth" });
+    if (route === "/") return scroll();
+    window.location.hash = "#/";
+    setTimeout(scroll, 50);
+  }
+
   return (
     <>
       <header className="bar">
@@ -37,10 +47,17 @@ export default function App() {
         </nav>
       </header>
 
-      {route === "/login" ? <Login /> : route === "/signup" ? <Onboarding /> : <Home />}
+      {route === "/login" ? <Login /> : route === "/signup" ? <Onboarding /> : route === "/refund" ? <Refund /> : <Home />}
 
       <footer>
-        <p>Workterm helps you reach firms. It does not promise a placement.</p>
+        <nav className="footnav" aria-label="Footer">
+          <a href="#/login">Log in</a>
+          <a href="#/signup">Sign up</a>
+          <a href="#faq" onClick={goToFaq}>
+            FAQ
+          </a>
+          <a href="#/refund">Refund policy</a>
+        </nav>
       </footer>
     </>
   );

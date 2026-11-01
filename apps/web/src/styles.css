@@ -277,8 +277,21 @@ footer {
   color: var(--muted);
 }
 
-footer p {
-  margin: 0;
+.footnav {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px 24px;
+}
+
+.footnav a {
+  color: var(--muted);
+  text-decoration: none;
+}
+
+.footnav a:hover {
+  color: var(--accent);
+  text-decoration: underline;
 }
 
 .join {

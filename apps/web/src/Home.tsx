@@ -174,7 +174,7 @@ export default function Home() {
           )}
         </section>
 
-        <section className="faq" aria-label="Questions and answers">
+        <section className="faq" id="faq" aria-label="Questions and answers">
           <h2 className="join">Questions</h2>
           {FAQ.map((f) => (
             <details key={f.q}>
