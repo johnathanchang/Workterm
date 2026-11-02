@@ -220,7 +220,7 @@ export default function Onboarding() {
               </li>
             </ul>
             <p className="notice">
-              Preview only: nothing was saved. Resume rating, job matches and personalized CVs open with early access.
+              Preview only: nothing was saved. Resume rating, job matches and personalized CVs open when Workterm opens.
             </p>
             <a className="btn" href="#/">
               Back to home

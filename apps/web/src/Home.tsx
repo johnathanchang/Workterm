@@ -1,7 +1,7 @@
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { joinWaitlist, track } from "./api";
 
-type Status = "idle" | "sending" | "joined" | "already" | "invalid_email" | "error";
+type Status = "idle" | "sending" | "joined" | "already" | "invalid_email" | "missing" | "error";
 
 // ?src=tiktok in the link tells us which post brought the visitor.
 const source = new URLSearchParams(window.location.search).get("src")?.slice(0, 50) || undefined;
@@ -32,24 +32,45 @@ const FEATURES = [
 const FAQ = [
   {
     q: "Who is Workterm for?",
-    a: "Any student looking for a co-op, in any program and at any school.",
+    a: "Any student looking for a co-op, in any program and at any school. We start with students in the Toronto, Hamilton and Waterloo area, but you do not need to be there to start.",
+  },
+  {
+    q: "What does Workterm do?",
+    a: "It builds a resume for each job, rates your resume against that job, finds roles and firms that fit you, and helps you apply to many at once.",
   },
   {
     q: "How does Workterm rate my resume?",
     a: "It compares your resume to the jobs you want. You see what lines up, what is missing, and what to fix first. The score is a guide. It is not a promise of a placement.",
   },
   {
-    q: "Will anything send without my approval?",
-    a: "No. You read and approve every application before it goes out. Daily limits keep you from looking like spam.",
-  },
-  {
-    q: "How accurate is the professor data?",
-    a: "Workterm does not use professor data in this version. If we add it, we will show where it comes from and how recent it is.",
-  },
-  {
     q: "Is my resume private?",
     a: "We use your resume to rate it and match jobs. It goes to an employer only when you approve an application. We collect as little as we can.",
   },
+  {
+    q: "How much does it cost?",
+    a: "Seeing your matches and sending 5 emails is free. Paid access is one price per co-op term, about $30 to $40. We are not taking payments yet. See the refund policy for the terms.",
+  },
+];
+
+// Logos load from the simple-icons CDN (pinned version; newer versions dropped some brands).
+// Each icon is a mask filled with the brand colour.
+const ICONS = "https://cdn.jsdelivr.net/npm/simple-icons@11.0.0/icons";
+const COMPANIES: { name: string; slug: string; fill: string }[] = [
+  { name: "Google", slug: "google", fill: "conic-gradient(#ea4335 0 45deg, #4285f4 0 135deg, #34a853 0 225deg, #fbbc05 0 300deg, #ea4335 0)" },
+  { name: "Microsoft", slug: "microsoft", fill: "conic-gradient(#7fba00 0 25%, #ffb900 0 50%, #00a4ef 0 75%, #f25022 0)" },
+  { name: "NVIDIA", slug: "nvidia", fill: "#76b900" },
+  { name: "AMD", slug: "amd", fill: "#ed1c24" },
+  { name: "Apple", slug: "apple", fill: "#000000" },
+  { name: "Tesla", slug: "tesla", fill: "#e82127" },
+  { name: "Meta", slug: "meta", fill: "#0866ff" },
+  { name: "Amazon", slug: "amazon", fill: "#ff9900" },
+  { name: "Intel", slug: "intel", fill: "#0071c5" },
+  { name: "Qualcomm", slug: "qualcomm", fill: "#3253dc" },
+  { name: "Shopify", slug: "shopify", fill: "#95bf47" },
+  { name: "IBM", slug: "ibm", fill: "#0f62fe" },
+  { name: "Cisco", slug: "cisco", fill: "#049fd9" },
+  { name: "Adobe", slug: "adobe", fill: "#fa0f00" },
+  { name: "Boeing", slug: "boeing", fill: "#1d439c" },
 ];
 
 export default function Home() {
@@ -69,13 +90,14 @@ export default function Home() {
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     if (status === "sending") return;
+    if (!school.trim() || !program.trim()) return setStatus("missing");
     setStatus("sending");
     track("waitlist_signup_click", source);
     setStatus(
       await joinWaitlist({
         email,
-        school: school || undefined,
-        program: program || undefined,
+        school: school.trim(),
+        program: program.trim(),
         source,
       }),
     );
@@ -98,9 +120,27 @@ export default function Home() {
             className="cta"
             onClick={() => document.getElementById("early-access")?.scrollIntoView({ behavior: "smooth" })}
           >
-            Get early access
+            Start now
           </button>
-          <p className="cta-note">Free to start. Join the list now and be first in when we open.</p>
+          <p className="cta-note">Free to start.</p>
+        </section>
+
+        <section className="logos" aria-label="Companies you can target">
+          <p className="logos-title">Find co-ops at companies like these</p>
+          <div className="marquee">
+            <ul className="marquee-track">
+              {[...COMPANIES, ...COMPANIES].map((c, i) => (
+                <li key={i} aria-hidden={i >= COMPANIES.length}>
+                  <span
+                    className="logo"
+                    role="img"
+                    aria-label={c.name}
+                    style={{ background: c.fill, WebkitMaskImage: `url(${ICONS}/${c.slug}.svg)`, maskImage: `url(${ICONS}/${c.slug}.svg)` }}
+                  />
+                </li>
+              ))}
+            </ul>
+          </div>
         </section>
 
         <section className="steps" aria-label="What Workterm does">
@@ -114,12 +154,11 @@ export default function Home() {
         </section>
 
         <section className="signup" id="early-access">
-          <p className="eyebrow">Early access list</p>
-          <h2 className="join">Get early access</h2>
+          <h2 className="join">Your internship awaits.</h2>
           {done ? (
             <div className="card success" role="status">
               <h2>{status === "joined" ? "You're on the list." : "You're already on the list."}</h2>
-              <p>We'll email you once when early access opens. No spam, and you can unsubscribe anytime.</p>
+              <p>We'll email you once when Workterm opens. No spam, and you can unsubscribe anytime.</p>
             </div>
           ) : (
             <form className="card" onSubmit={onSubmit} noValidate>
@@ -137,9 +176,7 @@ export default function Home() {
               </label>
               <div className="row">
                 <label>
-                  <span>
-                    School <span className="opt">(optional)</span>
-                  </span>
+                  <span>School</span>
                   <input
                     type="text"
                     autoComplete="organization"
@@ -150,9 +187,7 @@ export default function Home() {
                   />
                 </label>
                 <label>
-                  <span>
-                    Program <span className="opt">(optional)</span>
-                  </span>
+                  <span>Program</span>
                   <input
                     type="text"
                     placeholder="Your program"
@@ -162,26 +197,32 @@ export default function Home() {
                   />
                 </label>
               </div>
-              <button type="submit" disabled={status === "sending"}>
-                {status === "sending" ? "Joining…" : "Join the waitlist"}
+              <button type="submit" className="cta" disabled={status === "sending"}>
+                {status === "sending" ? "Starting…" : "Start now"}
               </button>
+              {status === "missing" && <p className="error">Please fill in your school and program.</p>}
               {status === "invalid_email" && <p className="error">That email doesn't look right. Check it and try again.</p>}
               {status === "error" && <p className="error">Something went wrong on our side. Please try again.</p>}
               <p className="fine">
-                By joining, you agree that Workterm may email you about early access. Unsubscribe anytime.
+                By joining, you agree that Workterm may email you about updates, changes, and pricing. Unsubscribe anytime.
               </p>
             </form>
           )}
         </section>
 
         <section className="faq" id="faq" aria-label="Questions and answers">
-          <h2 className="join">Questions</h2>
-          {FAQ.map((f) => (
-            <details key={f.q}>
-              <summary>{f.q}</summary>
-              <p>{f.a}</p>
-            </details>
-          ))}
+          <div className="faq-intro">
+            <h2>Questions?</h2>
+            <p>What Workterm does and what happens when you apply.</p>
+          </div>
+          <div className="faq-list">
+            {FAQ.map((f, i) => (
+              <details key={f.q} open={i === 0}>
+                <summary>{f.q}</summary>
+                <p>{f.a}</p>
+              </details>
+            ))}
+          </div>
         </section>
       </main>
 

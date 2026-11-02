@@ -12,7 +12,7 @@ export default function Login() {
         <AuthButtons verb="Continue" onPick={setTried} />
         {tried && (
           <p className="notice" role="status">
-            {tried === "google" ? "Google" : "Microsoft"} sign-in is not connected yet. It goes live when early access
+            {tried === "google" ? "Google" : "Microsoft"} sign-in is not connected yet. It goes live when Workterm
             opens.
           </p>
         )}
