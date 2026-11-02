@@ -25,7 +25,7 @@ export default function App() {
   return (
     <>
       <header className="bar">
-        <a className="logo" href="#/">
+        <a className="brand" href="#/">
           Workterm
         </a>
         <nav className="auth" aria-label="Account">

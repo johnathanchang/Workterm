@@ -1,54 +1,36 @@
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { joinWaitlist, track } from "./api";
+import { CreateProfile, HowItWorks } from "./HowItWorks";
 
 type Status = "idle" | "sending" | "joined" | "already" | "invalid_email" | "missing" | "error";
 
 // ?src=tiktok in the link tells us which post brought the visitor.
 const source = new URLSearchParams(window.location.search).get("src")?.slice(0, 50) || undefined;
 
-const FEATURES = [
-  {
-    n: "01",
-    title: "A CV made for each job",
-    body: "Workterm rewrites your resume for every role you want, using your own experience. You read it and edit it.",
-  },
-  {
-    n: "02",
-    title: "A clear resume score",
-    body: "See how your resume rates against the jobs you want, and what to fix first.",
-  },
-  {
-    n: "03",
-    title: "Jobs that fit you",
-    body: "Your resume and your desired roles drive the search. Each match says why it fits.",
-  },
-  {
-    n: "04",
-    title: "Apply on your terms",
-    body: "Send many applications in one sitting. You approve each one, and daily limits keep you from looking like spam.",
-  },
-];
-
 const FAQ = [
   {
     q: "Who is Workterm for?",
-    a: "Any student looking for a co-op, in any program and at any school. We start with students in the Toronto, Hamilton and Waterloo area, but you do not need to be there to start.",
+    a: "Workterm is an application designed to help students look for co-op internship programs, in any program and any school. As the job market tightens, Workterm helps tighten, review, and send out quality applications for best results.",
   },
   {
     q: "What does Workterm do?",
-    a: "It builds a resume for each job, rates your resume against that job, finds roles and firms that fit you, and helps you apply to many at once.",
+    a: "Workterm builds a resume for each job, rates your resume against that job, finds roles and firms that fit you, and helps you apply to many at once.",
   },
   {
     q: "How does Workterm rate my resume?",
-    a: "It compares your resume to the jobs you want. You see what lines up, what is missing, and what to fix first. The score is a guide. It is not a promise of a placement.",
+    a: "Workterm compares your resume to the jobs you want. You see what lines up, what is missing, and what to fix first. The score is a guide. It is not a promise of a placement.",
   },
   {
     q: "Is my resume private?",
-    a: "We use your resume to rate it and match jobs. It goes to an employer only when you approve an application. We collect as little as we can.",
+    a: "We use your resume to rate it and match jobs. It goes to an employer only when you approve an application. Otherwise, all your information is private.",
   },
   {
-    q: "How much does it cost?",
-    a: "Seeing your matches and sending 5 emails is free. Paid access is one price per co-op term, about $30 to $40. We are not taking payments yet. See the refund policy for the terms.",
+    q: "Still have questions?",
+    a: (
+      <>
+        Send all your personal questions and concerns to <a href="mailto:x@workterm.ca">x@workterm.ca</a>.
+      </>
+    ),
   },
 ];
 
@@ -59,18 +41,18 @@ const COMPANIES: { name: string; slug: string; fill: string; local?: boolean }[]
   { name: "Google", slug: "google", fill: "conic-gradient(#ea4335 0 45deg, #4285f4 0 135deg, #34a853 0 225deg, #fbbc05 0 300deg, #ea4335 0)" },
   { name: "Microsoft", slug: "microsoft", fill: "conic-gradient(#7fba00 0 25%, #ffb900 0 50%, #00a4ef 0 75%, #f25022 0)" },
   { name: "NVIDIA", slug: "nvidia", fill: "#76b900" },
-  { name: "AMD", slug: "amd", fill: "#ed1c24" },
-  { name: "Apple", slug: "apple", fill: "#000000" },
-  { name: "Tesla", slug: "tesla", fill: "#e82127" },
-  { name: "Meta", slug: "meta", fill: "#0866ff" },
+  { name: "AMD", slug: "amd", fill: "#ffffff" },
+  { name: "Apple", slug: "apple", fill: "#ffffff" },
+  { name: "Tesla", slug: "tesla", fill: "#ffffff" },
+  { name: "Meta", slug: "meta", fill: "#5aa0ff" },
   { name: "Amazon", slug: "amazon", fill: "#ff9900" },
-  { name: "Intel", slug: "intel", fill: "#0071c5" },
-  { name: "Vercel", slug: "vercel", fill: "#000000" },
+  { name: "Intel", slug: "intel", fill: "#5db8ff" },
+  { name: "Vercel", slug: "vercel", fill: "#ffffff" },
   { name: "Shopify", slug: "shopify", fill: "#95bf47" },
-  { name: "IBM", slug: "ibm", fill: "#0f62fe" },
-  { name: "Cisco", slug: "cisco", fill: "#049fd9" },
-  { name: "Adobe", slug: "adobe", fill: "#fa0f00" },
-  { name: "Jane Street", slug: "janestreet", fill: "#1f3a5f", local: true },
+  { name: "IBM", slug: "ibm", fill: "#78a9ff" },
+  { name: "Cisco", slug: "cisco", fill: "#4cc9f0" },
+  { name: "Adobe", slug: "adobe", fill: "#ffffff" },
+  { name: "Jane Street", slug: "janestreet", fill: "#ffffff", local: true },
 ];
 
 const iconUrl = (c: { slug: string; local?: boolean }) => (c.local ? `/logos/${c.slug}.svg` : `${ICONS}/${c.slug}.svg`);
@@ -87,6 +69,42 @@ export default function Home() {
     if (tracked.current) return;
     tracked.current = true;
     track("page_view", source);
+  }, []);
+
+  // The first scroll down from the top jumps straight to "How it works". It re-arms when you return to the top.
+  // It listens to the wheel, touch and keys, so scrolls started by buttons (like "Start for free") are left alone.
+  useEffect(() => {
+    let armed = true;
+    let touchY = 0;
+    const jump = (e: Event) => {
+      if (!armed || window.scrollY > 5) return;
+      armed = false;
+      e.preventDefault();
+      const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      const bar = document.querySelector(".bar")?.getBoundingClientRect().height ?? 0;
+      const top = (document.getElementById("how-it-works")?.getBoundingClientRect().top ?? 0) + window.scrollY - bar;
+      window.scrollTo({ top, behavior: reduce ? "auto" : "smooth" });
+    };
+    const onWheel = (e: WheelEvent) => e.deltaY > 0 && jump(e);
+    const onTouchStart = (e: TouchEvent) => (touchY = e.touches[0].clientY);
+    const onTouchMove = (e: TouchEvent) => touchY - e.touches[0].clientY > 10 && jump(e);
+    const onKey = (e: KeyboardEvent) => {
+      const typing = (e.target as HTMLElement).closest?.("input, textarea, select, button, summary");
+      if (!typing && ["ArrowDown", "PageDown", " "].includes(e.key)) jump(e);
+    };
+    const onScroll = () => window.scrollY === 0 && (armed = true);
+    window.addEventListener("wheel", onWheel, { passive: false });
+    window.addEventListener("touchstart", onTouchStart, { passive: true });
+    window.addEventListener("touchmove", onTouchMove, { passive: false });
+    window.addEventListener("keydown", onKey);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      window.removeEventListener("wheel", onWheel);
+      window.removeEventListener("touchstart", onTouchStart);
+      window.removeEventListener("touchmove", onTouchMove);
+      window.removeEventListener("keydown", onKey);
+      window.removeEventListener("scroll", onScroll);
+    };
   }, []);
 
   async function onSubmit(e: FormEvent) {
@@ -110,49 +128,46 @@ export default function Home() {
   return (
     <>
       <main>
-        <section className="hero">
-          <h1>
-            Turn your student resume into your <em>dream co-op.</em>
-          </h1>
-          <p className="lead">
-            The only job finder designed for students, made by students. Workterm rewrites your resume to match your desired internship, finding you quality jobs with tailored resumes.
-          </p>
-          <button
-            type="button"
-            className="cta"
-            onClick={() => document.getElementById("early-access")?.scrollIntoView({ behavior: "smooth" })}
-          >
-            Start for free
-          </button>
-        </section>
+        <div className="first-screen">
+          <section className="hero">
+            <h1>
+              Turn your student resume into your <em>dream co-op.</em>
+            </h1>
+            <p className="lead">
+              The only job finder designed for students, made by students. Workterm rewrites your resume to match your desired internship, finding you quality jobs with tailored resumes.
+            </p>
+            <button
+              type="button"
+              className="cta"
+              onClick={() => document.getElementById("early-access")?.scrollIntoView({ behavior: "smooth" })}
+            >
+              Start for free
+            </button>
+            <p className="cta-note">Start with a free trial. Cancel anytime.</p>
+          </section>
 
-        <section className="logos" aria-label="Companies you can target">
-          <p className="logos-title">Find co-ops at companies like these</p>
-          <div className="marquee">
-            <ul className="marquee-track">
-              {[...COMPANIES, ...COMPANIES].map((c, i) => (
-                <li key={i} aria-hidden={i >= COMPANIES.length}>
-                  <span
-                    className="logo"
-                    role="img"
-                    aria-label={c.name}
-                    style={{ background: c.fill, WebkitMaskImage: `url(${iconUrl(c)})`, maskImage: `url(${iconUrl(c)})` }}
-                  />
-                </li>
-              ))}
-            </ul>
-          </div>
-        </section>
+          <section className="logos" aria-label="Companies you can target">
+            <p className="logos-title">Find co-ops at 5,000+ companies like these</p>
+            <div className="marquee">
+              <ul className="marquee-track">
+                {[...COMPANIES, ...COMPANIES].map((c, i) => (
+                  <li key={i} aria-hidden={i >= COMPANIES.length}>
+                    <span
+                      className="logo"
+                      role="img"
+                      aria-label={c.name}
+                      style={{ background: c.fill, WebkitMaskImage: `url(${iconUrl(c)})`, maskImage: `url(${iconUrl(c)})` }}
+                    />
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </section>
+        </div>
 
-        <section className="steps" aria-label="What Workterm does">
-          {FEATURES.map((f) => (
-            <article key={f.n}>
-              <span className="num">{f.n}</span>
-              <h3>{f.title}</h3>
-              <p>{f.body}</p>
-            </article>
-          ))}
-        </section>
+        <HowItWorks />
+
+        <CreateProfile />
 
         <section className="signup" id="early-access">
           <h2 className="join">Your internship awaits.</h2>
