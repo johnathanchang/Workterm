@@ -1,6 +1,6 @@
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { joinWaitlist, track } from "./api";
-import { CreateProfile, HowItWorks } from "./HowItWorks";
+import { Compare, CreateProfile, HowItWorks } from "./HowItWorks";
 
 type Status = "idle" | "sending" | "joined" | "already" | "invalid_email" | "missing" | "error";
 
@@ -169,7 +169,9 @@ export default function Home() {
 
         <CreateProfile />
 
-        <section className="signup band" id="early-access">
+        <Compare />
+
+        <section className="signup" id="early-access">
           <h2 className="join">Your internship awaits.</h2>
           {done ? (
             <div className="card success" role="status">
@@ -226,7 +228,7 @@ export default function Home() {
           )}
         </section>
 
-        <section className="faq" id="faq" aria-label="Questions and answers">
+        <section className="faq band" id="faq" aria-label="Questions and answers">
           <div className="faq-intro">
             <h2>Questions?</h2>
             <p>What Workterm does and what happens when you apply.</p>

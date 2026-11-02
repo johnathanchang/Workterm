@@ -1,4 +1,4 @@
-// Two showcase sections on the home page. The cards hold small mock-ups of the product, not real data.
+// Showcase sections on the home page. The cards hold small mock-ups of the product, not real data.
 
 // Resume score rising as Workterm tailors it. Heights are percentages of the chart.
 const SCORE_BARS = [22, 26, 29, 33, 37, 42, 46, 52, 57, 63, 68, 74, 80, 86, 93];
@@ -145,7 +145,7 @@ export function HowItWorks() {
 
 export function CreateProfile() {
   return (
-    <section className="showcase" aria-labelledby="profile-title">
+    <section className="showcase" id="profile" aria-labelledby="profile-title">
       <h2 id="profile-title">Set up your profile.</h2>
       <p className="showcase-sub">It takes a few minutes. You can change anything later.</p>
 
@@ -232,6 +232,81 @@ export function CreateProfile() {
             <p className="uploaded">Uploaded!</p>
           </div>
         </article>
+      </div>
+
+      <StartButton />
+    </section>
+  );
+}
+
+// Compared by kind of tool, plus Simplify by name. Simplify's values come from its public pages.
+const RIVALS = ["Workterm", "School job board", "ChatGPT", "Simplify"];
+
+type Cell = boolean | string | { main: string; sub?: string };
+const ROWS: { label: string; cells: Cell[]; price?: boolean }[] = [
+  { label: "Built around co-op terms", cells: [true, true, false, false] },
+  { label: "Rates your resume against each job", cells: [true, false, "If you paste it in", "Paid plan"] },
+  { label: "A tailored resume for every job", cells: [true, false, "One at a time, by hand", "Paid plan"] },
+  { label: "Finds firms that don't post jobs", cells: [true, false, false, false] },
+  { label: "Sends from your Gmail, after you approve", cells: [true, false, false, false] },
+  {
+    label: "Price",
+    price: true,
+    cells: [{ main: "$20 a month" }, "Free", "$20 a month", "$39.99 a month"],
+  },
+];
+
+const Mark = ({ cell }: { cell: Cell }) =>
+  cell === true ? (
+    <span className="yes" role="img" aria-label="Yes">
+      <Check />
+    </span>
+  ) : cell === false ? (
+    <span className="no" role="img" aria-label="No">
+      –
+    </span>
+  ) : typeof cell === "string" ? (
+    <span className="part">{cell}</span>
+  ) : (
+    <span className="price">
+      <strong>{cell.main}</strong>
+      {cell.sub && <small>{cell.sub}</small>}
+    </span>
+  );
+
+export function Compare() {
+  return (
+    <section className="showcase band" id="compare" aria-labelledby="compare-title">
+      <h2 id="compare-title">How Workterm compares.</h2>
+      <p className="showcase-sub">Other tools do one piece. Workterm covers the whole co-op search.</p>
+
+      <div className="compare-wrap">
+        <table className="compare">
+          <thead>
+            <tr>
+              <th scope="col">
+                <span className="visually-hidden">Feature</span>
+              </th>
+              {RIVALS.map((r, i) => (
+                <th key={r} scope="col" className={i === 0 ? "us" : undefined}>
+                  {r}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {ROWS.map((row) => (
+              <tr key={row.label} className={row.price ? "price-row" : undefined}>
+                <th scope="row">{row.label}</th>
+                {row.cells.map((c, i) => (
+                  <td key={i} className={i === 0 ? "us" : undefined}>
+                    <Mark cell={c} />
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
 
       <StartButton />

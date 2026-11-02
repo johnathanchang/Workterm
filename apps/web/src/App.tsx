@@ -1,10 +1,13 @@
 import { useEffect, useState } from "react";
+import Blog, { POSTS } from "./Blog";
 import Home from "./Home";
 import Login from "./Login";
 import Onboarding from "./Onboarding";
+import Privacy from "./Privacy";
 import Refund from "./Refund";
+import Terms from "./Terms";
 
-// Tiny hash router: #/login, #/signup and #/refund. No router library needed yet.
+// Tiny hash router: #/login, #/signup, #/blog/<slug>, #/terms, #/privacy and #/refund. No router library needed yet.
 function useRoute(): string {
   const read = () => window.location.hash.replace(/^#/, "") || "/";
   const [route, setRoute] = useState(read);
@@ -17,6 +20,24 @@ function useRoute(): string {
     return () => window.removeEventListener("hashchange", onChange);
   }, []);
   return route;
+}
+
+// Footer product links jump to sections of the home page, from any page.
+const PRODUCT_LINKS = [
+  { id: "how-it-works", label: "How it works" },
+  { id: "profile", label: "Set up your profile" },
+  { id: "compare", label: "How Workterm compares" },
+  { id: "faq", label: "Questions" },
+  { id: "early-access", label: "Start for free" },
+];
+
+function goToSection(e: React.MouseEvent, id: string) {
+  e.preventDefault();
+  const scroll = () => document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
+  if (window.location.hash === "" || window.location.hash === "#/") return scroll();
+  window.location.hash = "#/";
+  // Wait for the home page to render (the router scrolls to the top first).
+  setTimeout(scroll, 80);
 }
 
 export default function App() {
@@ -38,14 +59,48 @@ export default function App() {
         </nav>
       </header>
 
-      {route === "/login" ? <Login /> : route === "/signup" ? <Onboarding /> : route === "/refund" ? <Refund /> : <Home />}
+      {route === "/login" ? (
+        <Login />
+      ) : route === "/signup" ? (
+        <Onboarding />
+      ) : route === "/terms" ? (
+        <Terms />
+      ) : route === "/privacy" ? (
+        <Privacy />
+      ) : route === "/refund" ? (
+        <Refund />
+      ) : route.startsWith("/blog") ? (
+        <Blog slug={route.replace(/^\/blog\/?/, "")} />
+      ) : (
+        <Home />
+      )}
 
       <footer>
-        <nav className="footnav" aria-label="Footer">
-          <a href="#/login">Log in</a>
-          <a href="#/signup">Sign up</a>
-          <a href="#/refund">Refund policy</a>
-        </nav>
+        <div className="footcols">
+          <nav className="footcol" aria-labelledby="foot-guides">
+            <h2 id="foot-guides">Internship guides</h2>
+            {POSTS.map((p) => (
+              <a key={p.slug} href={`#/blog/${p.slug}`}>
+                {p.title}
+              </a>
+            ))}
+          </nav>
+          <nav className="footcol" aria-labelledby="foot-product">
+            <h2 id="foot-product">Product</h2>
+            {PRODUCT_LINKS.map((l) => (
+              <a key={l.id} href="#/" onClick={(e) => goToSection(e, l.id)}>
+                {l.label}
+              </a>
+            ))}
+          </nav>
+          <nav className="footcol" aria-labelledby="foot-legal">
+            <h2 id="foot-legal">Legal</h2>
+            <a href="#/terms">Terms of Service</a>
+            <a href="#/privacy">Privacy Policy</a>
+            <a href="#/refund">Refund policy</a>
+          </nav>
+        </div>
+        <p className="copyright">© 2026 Workterm</p>
       </footer>
     </>
   );

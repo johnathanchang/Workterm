@@ -19,7 +19,8 @@
 
 /* Light surfaces on the red page: dark red text, cardinal links, gold stays on buttons. */
 .card,
-.show-card {
+.show-card,
+.compare-wrap {
   --ink: #3b0000;
   --muted: #7a2a2a;
   --line: #e3c3c3;
@@ -401,27 +402,96 @@ button:disabled {
 }
 
 footer {
-  padding: 24px 0 40px;
+  padding: 40px 0 40px;
   border-top: 1px solid var(--line);
   font-size: 0.85rem;
   color: var(--muted);
 }
 
-.footnav {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 8px 24px;
+/* Footer on every page: guides on the left, product in the middle, legal on the right. */
+.footcols {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
 }
 
-.footnav a {
+.footcol {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+}
+
+.footcol:first-child {
+  text-align: left;
+}
+
+.footcol:last-child {
+  text-align: right;
+}
+
+.footcol h2 {
+  margin: 0 0 4px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+
+.footcol a {
   color: var(--muted);
   text-decoration: none;
 }
 
-.footnav a:hover {
+.footcol a:hover {
   color: var(--accent);
   text-decoration: underline;
+}
+
+.copyright {
+  margin: 28px 0 0;
+  font-size: 0.75rem;
+  opacity: 0.7;
+}
+
+@media (max-width: 640px) {
+  .footcols {
+    grid-template-columns: 1fr;
+    gap: 28px;
+  }
+
+  .footcol:first-child,
+  .footcol:last-child {
+    text-align: center;
+  }
+}
+
+/* Internship guide posts read left-aligned, like an article. */
+.article {
+  text-align: left;
+}
+
+.article ul {
+  margin: 0 0 8px;
+  padding-left: 20px;
+  color: var(--muted);
+}
+
+.article li {
+  margin-bottom: 6px;
+}
+
+.article-intro {
+  font-size: 1.05rem;
+}
+
+.eyebrow-small {
+  margin: 0 0 6px;
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
 }
 
 .join {
@@ -742,10 +812,12 @@ select:focus-visible {
 }
 
 .faq {
+  scroll-margin-top: 76px;
   display: grid;
   grid-template-columns: 1fr 1.6fr;
   gap: 48px;
-  padding: 72px 0 56px;
+  margin-top: 24px;
+  padding-block: 48px;
   text-align: left;
 }
 
@@ -1182,4 +1254,123 @@ select:focus-visible {
     width: 100%;
     animation: none;
   }
+}
+
+/* Comparison table: a cream card, Workterm's column picked out in gold. Scrolls sideways inside the card on phones. */
+.compare-wrap {
+  overflow-x: auto;
+  border-radius: 20px;
+  background: var(--card);
+  box-shadow: 0 24px 48px -28px rgba(0, 0, 0, 0.5);
+}
+
+.compare {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.92rem;
+  text-align: center;
+}
+
+.compare th,
+.compare td {
+  padding: 14px 12px;
+  border-bottom: 1px solid var(--line);
+}
+
+.compare tbody tr:last-child > * {
+  border-bottom: 0;
+}
+
+.compare thead th {
+  font-weight: 800;
+}
+
+.compare th[scope="row"] {
+  padding-left: 20px;
+  font-weight: 600;
+  text-align: left;
+}
+
+/* Feature names stay put while the columns swipe sideways on phones. */
+.compare th[scope="row"],
+.compare thead th:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: var(--card);
+}
+
+/* Under 640px the table keeps its width and scrolls inside the card; the page itself never scrolls sideways. */
+@media (max-width: 639px) {
+  .compare {
+    min-width: 600px;
+  }
+
+  .compare th[scope="row"] {
+    min-width: 150px;
+    box-shadow: 6px 0 10px -8px rgba(0, 0, 0, 0.35);
+  }
+}
+
+.compare .us {
+  background: #fff3c4;
+}
+
+.compare thead .us {
+  background: var(--btn);
+  color: #3b0000;
+}
+
+.yes {
+  display: inline-grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #1f9d55;
+  color: #fff;
+}
+
+.no {
+  font-size: 1.1rem;
+  color: var(--muted);
+  opacity: 0.6;
+}
+
+.part {
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
+.compare .us .part {
+  font-weight: 700;
+  color: var(--ink);
+}
+
+/* Workterm's price is the boldest cell in its column. */
+.price {
+  display: grid;
+  gap: 2px;
+  white-space: nowrap;
+}
+
+.price strong {
+  font-size: 1.05rem;
+  font-weight: 800;
+}
+
+.price small {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+/* Read by screen readers, hidden on screen. */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
 }
