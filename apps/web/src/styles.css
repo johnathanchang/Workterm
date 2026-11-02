@@ -970,47 +970,123 @@ select:focus-visible {
   background: linear-gradient(90deg, #990000, #e0574f);
 }
 
-.meter > .loading {
-  width: 40%;
-  animation: meter-slide 1.6s ease-in-out infinite;
-}
-
-@keyframes meter-slide {
-  from {
-    transform: translateX(-100%);
-  }
-  to {
-    transform: translateX(250%);
-  }
-}
-
-.spinner {
-  flex: none;
-  width: 22px;
-  height: 22px;
-  border: 3px solid #f1e4e4;
-  border-top-color: #990000;
-  border-radius: 50%;
-  animation: spin 0.9s linear infinite;
-}
-
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-.file-icon {
+/* Step 3: a tilted resume floats while the bar uploads it, then "Uploaded!" pops in. One 5s loop. */
+.upload-scene {
   display: grid;
-  flex: none;
-  place-items: center;
-  width: 34px;
-  height: 40px;
-  border-radius: 6px;
-  background: #990000;
-  color: #fff;
-  font-size: 0.65rem;
+  justify-items: center;
+  gap: 14px;
+}
+
+.sheet-art {
+  width: 100%;
+  max-width: 270px;
+  height: auto;
+  overflow: visible;
+}
+
+.sheet {
+  filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.12));
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: sheet-float 5s ease-in-out infinite;
+}
+
+.sheet line {
+  stroke: #e2cfcf;
+  stroke-width: 5;
+  stroke-linecap: round;
+}
+
+.sheet line.sheet-head {
+  stroke: #990000;
+  stroke-width: 7;
+}
+
+.sheet-shadow {
+  fill: rgba(60, 0, 0, 0.28);
+  filter: blur(4px);
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: shadow-float 5s ease-in-out infinite;
+}
+
+.upload-bar {
+  display: block;
+  width: 100%;
+  height: 10px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #f1e4e4;
+}
+
+.upload-bar > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #990000, #e0574f);
+  animation: upload-fill 5s ease-in-out infinite both;
+}
+
+.uploaded {
+  margin: 0;
+  font-size: 1.25rem;
   font-weight: 800;
+  color: #1f9d55;
+  animation: uploaded-in 5s ease-out infinite both;
+}
+
+@keyframes sheet-float {
+  0%,
+  100% {
+    transform: translateY(4px) rotate(-1deg);
+  }
+  50% {
+    transform: translateY(-8px) rotate(1.5deg);
+  }
+}
+
+@keyframes shadow-float {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.6;
+    transform: scale(0.85);
+  }
+}
+
+@keyframes upload-fill {
+  0%,
+  8% {
+    width: 0;
+  }
+  50%,
+  100% {
+    width: 100%;
+  }
+}
+
+@keyframes uploaded-in {
+  0%,
+  52% {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+  58% {
+    opacity: 1;
+    transform: scale(1.15);
+  }
+  62%,
+  92% {
+    opacity: 1;
+    transform: none;
+  }
+  100% {
+    opacity: 0;
+    transform: none;
+  }
 }
 
 .score-head {
@@ -1094,9 +1170,16 @@ select:focus-visible {
   }
 }
 
+/* Without motion, show the finished state: sheet still, bar full, "Uploaded!" visible. */
 @media (prefers-reduced-motion: reduce) {
-  .meter > .loading,
-  .spinner {
+  .sheet,
+  .sheet-shadow,
+  .uploaded {
+    animation: none;
+  }
+
+  .upload-bar > span {
+    width: 100%;
     animation: none;
   }
 }
