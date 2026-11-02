@@ -53,9 +53,9 @@ const FAQ = [
 ];
 
 // Logos load from the simple-icons CDN (pinned version; newer versions dropped some brands).
-// Each icon is a mask filled with the brand colour.
+// Each icon is a mask filled with the brand colour. Jane Street is not in that set, so its icon is saved in public/logos.
 const ICONS = "https://cdn.jsdelivr.net/npm/simple-icons@11.0.0/icons";
-const COMPANIES: { name: string; slug: string; fill: string }[] = [
+const COMPANIES: { name: string; slug: string; fill: string; local?: boolean }[] = [
   { name: "Google", slug: "google", fill: "conic-gradient(#ea4335 0 45deg, #4285f4 0 135deg, #34a853 0 225deg, #fbbc05 0 300deg, #ea4335 0)" },
   { name: "Microsoft", slug: "microsoft", fill: "conic-gradient(#7fba00 0 25%, #ffb900 0 50%, #00a4ef 0 75%, #f25022 0)" },
   { name: "NVIDIA", slug: "nvidia", fill: "#76b900" },
@@ -65,13 +65,15 @@ const COMPANIES: { name: string; slug: string; fill: string }[] = [
   { name: "Meta", slug: "meta", fill: "#0866ff" },
   { name: "Amazon", slug: "amazon", fill: "#ff9900" },
   { name: "Intel", slug: "intel", fill: "#0071c5" },
-  { name: "Qualcomm", slug: "qualcomm", fill: "#3253dc" },
+  { name: "Vercel", slug: "vercel", fill: "#000000" },
   { name: "Shopify", slug: "shopify", fill: "#95bf47" },
   { name: "IBM", slug: "ibm", fill: "#0f62fe" },
   { name: "Cisco", slug: "cisco", fill: "#049fd9" },
   { name: "Adobe", slug: "adobe", fill: "#fa0f00" },
-  { name: "Boeing", slug: "boeing", fill: "#1d439c" },
+  { name: "Jane Street", slug: "janestreet", fill: "#1f3a5f", local: true },
 ];
+
+const iconUrl = (c: { slug: string; local?: boolean }) => (c.local ? `/logos/${c.slug}.svg` : `${ICONS}/${c.slug}.svg`);
 
 export default function Home() {
   const [email, setEmail] = useState("");
@@ -113,16 +115,15 @@ export default function Home() {
             Turn your student resume into your <em>dream co-op.</em>
           </h1>
           <p className="lead">
-            Workterm rewrites your resume to match each job posting, so you get more interviews in less time.
+            The only job finder designed for students, made by students. Workterm rewrites your resume to match your desired internship, finding you quality jobs with tailored resumes.
           </p>
           <button
             type="button"
             className="cta"
             onClick={() => document.getElementById("early-access")?.scrollIntoView({ behavior: "smooth" })}
           >
-            Start now
+            Start for free
           </button>
-          <p className="cta-note">Free to start.</p>
         </section>
 
         <section className="logos" aria-label="Companies you can target">
@@ -135,7 +136,7 @@ export default function Home() {
                     className="logo"
                     role="img"
                     aria-label={c.name}
-                    style={{ background: c.fill, WebkitMaskImage: `url(${ICONS}/${c.slug}.svg)`, maskImage: `url(${ICONS}/${c.slug}.svg)` }}
+                    style={{ background: c.fill, WebkitMaskImage: `url(${iconUrl(c)})`, maskImage: `url(${iconUrl(c)})` }}
                   />
                 </li>
               ))}

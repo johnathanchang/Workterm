@@ -57,6 +57,13 @@ footer {
   align-items: center;
   gap: 16px;
   padding: 22px 0;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: var(--bg);
+  /* Extend the background to the full window width while the content stays centered. */
+  box-shadow: 0 0 0 100vmax var(--bg);
+  clip-path: inset(0 -100vmax);
 }
 
 .logo {
@@ -120,13 +127,35 @@ h1 {
   letter-spacing: -0.025em;
 }
 
+.hero h1 {
+  margin-bottom: 32px;
+  font-family: "Times New Roman", Times, "Liberation Serif", serif;
+  font-weight: 400;
+  letter-spacing: -0.04em;
+}
+
+.hero h1 em {
+  position: relative;
+  white-space: nowrap;
+}
+
+.hero h1 em::after {
+  content: "";
+  position: absolute;
+  left: 2%;
+  right: 0;
+  bottom: -0.22em;
+  height: 0.28em;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 300 20' preserveAspectRatio='none'%3E%3Cpath d='M4 12 C 70 6, 160 5, 250 6 C 275 6, 290 9, 296 15' fill='none' stroke='%23ffcc00' stroke-width='5' stroke-linecap='round'/%3E%3C/svg%3E") center / 100% 100% no-repeat;
+}
+
 h1 em {
   color: var(--accent);
   font-style: italic;
 }
 
 .lead {
-  margin: 0 0 32px;
+  margin: 0 0 48px;
   font-size: 1.15rem;
   color: var(--muted);
 }
@@ -195,6 +224,8 @@ form .cta::after {
 }
 
 .auth .btn.cta {
+  display: inline-flex;
+  align-items: center;
   gap: 8px;
   padding: 9px 18px;
   font-size: 0.95rem;
@@ -213,11 +244,15 @@ form .cta::after {
   box-shadow: 0 1px 0 #c99a00;
 }
 
-.cta-note {
-  margin: 14px 0 0;
-  font-size: 0.95rem;
-  font-weight: 600;
-  color: var(--muted);
+.hero .cta {
+  padding: 12px 26px;
+  border-radius: 10px;
+  font-size: 1rem;
+  box-shadow: 0 4px 0 #c99a00, 0 12px 27px -6px rgba(255, 204, 0, 0.55);
+}
+
+.hero .cta::after {
+  font-size: 1.15rem;
 }
 
 .card {
