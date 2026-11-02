@@ -81,8 +81,8 @@ export default function Home() {
       armed = false;
       e.preventDefault();
       const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-      const bar = document.querySelector(".bar")?.getBoundingClientRect().height ?? 0;
-      const top = (document.getElementById("how-it-works")?.getBoundingClientRect().top ?? 0) + window.scrollY - bar;
+      const barBottom = document.querySelector(".bar")?.getBoundingClientRect().bottom ?? 0;
+      const top = (document.getElementById("how-it-works")?.getBoundingClientRect().top ?? 0) + window.scrollY - barBottom;
       window.scrollTo({ top, behavior: reduce ? "auto" : "smooth" });
     };
     const onWheel = (e: WheelEvent) => e.deltaY > 0 && jump(e);
@@ -169,7 +169,7 @@ export default function Home() {
 
         <CreateProfile />
 
-        <section className="signup" id="early-access">
+        <section className="signup band" id="early-access">
           <h2 className="join">Your internship awaits.</h2>
           {done ? (
             <div className="card success" role="status">

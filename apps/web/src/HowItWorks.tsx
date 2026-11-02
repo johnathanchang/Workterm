@@ -24,7 +24,7 @@ const StartButton = () => (
 
 export function HowItWorks() {
   return (
-    <section className="showcase" id="how-it-works" aria-labelledby="how-title">
+    <section className="showcase band" id="how-it-works" aria-labelledby="how-title">
       <h2 id="how-title">How it works.</h2>
       <p className="showcase-sub">One resume in. Tailored applications out. You approve every step.</p>
 
