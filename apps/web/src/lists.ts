@@ -218,3 +218,116 @@ const az = (list: string[]) => [...list].sort((a, b) => a.localeCompare(b, "en",
 
 export const SCHOOLS = az(SCHOOL_NAMES);
 export const PROGRAMS = az(PROGRAM_NAMES);
+
+// Roles for the "What roles are you aiming for?" step. Full role names, so resume tailoring gets clear input.
+// Each role also lists example firm types for the preview matches. Real matches come from the AI in Phase 5.
+export const ROLES: Record<string, string[]> = {
+  "Software Engineering": ["A fintech startup", "A cloud software company", "A video game studio"],
+  "Data Analytics": ["A big bank", "A retail analytics team", "An insurance company"],
+  "Data Science": ["An AI lab", "An insurance company", "A sports analytics startup"],
+  "Product Management": ["A SaaS startup", "A delivery app", "A travel app"],
+  "Product Design (UX)": ["A design studio", "A health tech startup", "A banking app team"],
+  "IT and Systems": ["A hospital IT team", "A university IT department", "A managed IT firm"],
+  Cybersecurity: ["A security startup", "A big bank", "A government agency"],
+  "Mechanical Engineering": ["An auto parts maker", "A robotics startup", "An aerospace supplier"],
+  "Electrical Engineering": ["A power utility", "A chip design firm", "An electric vehicle startup"],
+  "Civil Engineering": ["A construction firm", "A city engineering department", "A transit agency"],
+  "Chemical Engineering": ["A chemical plant", "A battery startup", "A food manufacturer"],
+  "Biomedical Engineering": ["A medical device company", "A hospital research team", "A biotech startup"],
+  "Manufacturing Engineering": ["An automotive plant", "A packaging company", "A hardware startup"],
+  Research: ["A university lab", "An AI lab", "A biotech company"],
+  Marketing: ["A consumer brand", "A marketing agency", "A sports team"],
+  "Sales / Business Development": ["A B2B software company", "A medical supplies company", "A media company"],
+  Consulting: ["A consulting firm", "A strategy boutique", "A tech advisory team"],
+  Finance: ["An investment firm", "A big bank", "A credit union"],
+  Accounting: ["An accounting firm", "A tax firm", "A retail company finance team"],
+  Operations: ["A logistics company", "A hospital", "An e-commerce startup"],
+  "Supply Chain": ["A logistics company", "A grocery chain", "An auto parts maker"],
+  "HR / People": ["A tech company people team", "A staffing agency", "A hospital HR team"],
+  "Healthcare / Clinical": ["A hospital", "A community health centre", "A physiotherapy clinic"],
+  "Public Health": ["A public health unit", "A health charity", "A research institute"],
+  "Policy / Government": ["A government ministry", "A city council office", "A policy think tank"],
+  Communications: ["A PR agency", "A nonprofit", "A university communications office"],
+  "Journalism and Media": ["A news outlet", "A podcast studio", "A media company"],
+  Education: ["A school board", "An education startup", "A museum"],
+  "Social Services": ["A community nonprofit", "A youth centre", "A housing charity"],
+  Architecture: ["An architecture firm", "An urban design studio", "A construction firm"],
+  "Graphic Design": ["A design studio", "A marketing agency", "A publishing house"],
+};
+
+export const ALL_ROLES = az(Object.keys(ROLES));
+
+// Roles that fit each group of programs, best fit first.
+const FAMILY: Record<string, string[]> = {
+  business: ["Finance", "Accounting", "Marketing", "Consulting", "Operations", "Sales / Business Development", "Supply Chain", "HR / People"],
+  engineering: ["Mechanical Engineering", "Electrical Engineering", "Civil Engineering", "Manufacturing Engineering", "Software Engineering", "Operations", "Consulting", "Research"],
+  tech: ["Software Engineering", "Data Analytics", "Data Science", "Product Management", "IT and Systems", "Cybersecurity", "Product Design (UX)", "Research"],
+  science: ["Research", "Data Analytics", "Healthcare / Clinical", "Public Health", "Consulting", "Operations", "Education", "Policy / Government"],
+  health: ["Healthcare / Clinical", "Public Health", "Research", "Operations", "Education", "Social Services", "Policy / Government", "Communications"],
+  social: ["Policy / Government", "Research", "Social Services", "HR / People", "Communications", "Consulting", "Marketing", "Data Analytics"],
+  arts: ["Communications", "Marketing", "Journalism and Media", "Graphic Design", "Education", "Policy / Government", "Research", "Sales / Business Development"],
+  any: ["Software Engineering", "Data Analytics", "Marketing", "Finance", "Operations", "Research", "Communications", "Healthcare / Clinical"],
+};
+
+// Each program: its group, then the roles that fit it best (shown first).
+const PROGRAM_ROLES: Record<string, [string, string[]]> = {
+  "Business Administration (BBA / Commerce)": ["business", []],
+  Accounting: ["business", ["Accounting"]],
+  Finance: ["business", ["Finance"]],
+  Marketing: ["business", ["Marketing"]],
+  Economics: ["business", ["Finance", "Data Analytics", "Policy / Government", "Consulting"]],
+  Management: ["business", ["Operations", "Consulting"]],
+  Entrepreneurship: ["business", ["Product Management", "Sales / Business Development", "Marketing"]],
+  "Supply Chain Management": ["business", ["Supply Chain", "Operations"]],
+  "Mechanical Engineering": ["engineering", ["Mechanical Engineering", "Manufacturing Engineering"]],
+  "Electrical Engineering": ["engineering", ["Electrical Engineering"]],
+  "Civil Engineering": ["engineering", ["Civil Engineering"]],
+  "Chemical Engineering": ["engineering", ["Chemical Engineering"]],
+  "Computer Engineering": ["tech", ["Software Engineering", "Electrical Engineering"]],
+  "Software Engineering": ["tech", ["Software Engineering"]],
+  "Biomedical Engineering": ["engineering", ["Biomedical Engineering", "Research", "Healthcare / Clinical"]],
+  "Industrial Engineering": ["engineering", ["Manufacturing Engineering", "Operations", "Supply Chain", "Data Analytics"]],
+  "Computer Science": ["tech", []],
+  "Data Science": ["tech", ["Data Science", "Data Analytics"]],
+  "Information Technology / Information Systems": ["tech", ["IT and Systems"]],
+  Cybersecurity: ["tech", ["Cybersecurity", "IT and Systems"]],
+  Biology: ["science", ["Research", "Healthcare / Clinical"]],
+  Chemistry: ["science", ["Research", "Chemical Engineering"]],
+  Physics: ["science", ["Research", "Data Science", "Software Engineering"]],
+  Mathematics: ["science", ["Data Analytics", "Data Science", "Finance", "Software Engineering"]],
+  Statistics: ["science", ["Data Analytics", "Data Science", "Finance"]],
+  Biochemistry: ["science", ["Research", "Healthcare / Clinical"]],
+  "Environmental Science": ["science", ["Research", "Policy / Government", "Civil Engineering"]],
+  Neuroscience: ["science", ["Research", "Healthcare / Clinical", "Data Science"]],
+  Nursing: ["health", ["Healthcare / Clinical"]],
+  "Health Sciences": ["health", []],
+  "Kinesiology / Exercise Science": ["health", ["Healthcare / Clinical", "Research", "Education"]],
+  "Public Health": ["health", ["Public Health", "Policy / Government", "Data Analytics"]],
+  Pharmacy: ["health", ["Healthcare / Clinical", "Research"]],
+  Nutrition: ["health", ["Healthcare / Clinical", "Public Health"]],
+  Psychology: ["social", ["Research", "HR / People", "Healthcare / Clinical", "Social Services"]],
+  "Political Science": ["social", ["Policy / Government"]],
+  Sociology: ["social", []],
+  "Criminology / Criminal Justice": ["social", ["Policy / Government", "Social Services"]],
+  Anthropology: ["social", ["Research"]],
+  Geography: ["social", ["Policy / Government", "Data Analytics"]],
+  "International Relations": ["social", ["Policy / Government", "Consulting"]],
+  English: ["arts", ["Communications"]],
+  History: ["arts", ["Research", "Education"]],
+  Philosophy: ["arts", ["Policy / Government", "Research"]],
+  "Communications / Media Studies": ["arts", ["Communications", "Marketing", "Journalism and Media"]],
+  "Languages (French, Spanish, etc.)": ["arts", ["Communications", "Education"]],
+  "Fine Arts / Visual Arts": ["arts", ["Graphic Design", "Product Design (UX)"]],
+  Music: ["arts", ["Education", "Marketing"]],
+  Education: ["social", ["Education"]],
+  "Social Work": ["social", ["Social Services", "Healthcare / Clinical"]],
+  Architecture: ["arts", ["Architecture", "Civil Engineering", "Graphic Design"]],
+  "Design (Graphic / UX)": ["arts", ["Graphic Design", "Product Design (UX)", "Marketing"]],
+  Journalism: ["arts", ["Journalism and Media", "Communications"]],
+};
+
+// Up to 8 roles that fit the student's program. A program not on our list gets a broad mix.
+export function suggestedRoles(program: string): string[] {
+  const [family, lead] = PROGRAM_ROLES[program.trim()] ?? ["any", []];
+  return [...new Set([...lead, ...FAMILY[family]])].slice(0, 8);
+}

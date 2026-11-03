@@ -1624,3 +1624,119 @@ select:focus-visible {
     animation: none;
   }
 }
+
+/* Sign-up roles step: picked chips are filled with a check, the rest fade once 3 are picked. */
+.role-chips .chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 13px;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.role-chips .chip.off {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.role-chips .chip.add {
+  border-style: dashed;
+  background: transparent;
+  color: #990000;
+}
+
+.role-chips .chip.add:disabled {
+  opacity: 0.45;
+}
+
+.role-chips .addrow {
+  flex-basis: 100%;
+}
+
+.role-count {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin: -6px 0 0;
+  font-size: 0.88rem;
+  color: var(--muted);
+}
+
+.linkish {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #990000;
+  font: inherit;
+  font-weight: 600;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+/* Sign-up: Back buttons, clickable finished steps, and Edit links on the summary. */
+.nav .back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.nav > button:not(.back) {
+  flex: 1;
+}
+
+.progress .linkish.plain {
+  color: inherit;
+  font-weight: inherit;
+  text-decoration: none;
+}
+
+.progress .linkish.plain:hover {
+  text-decoration: underline;
+}
+
+.summary li {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.summary .edit {
+  margin-left: auto;
+  font-size: 0.85rem;
+}
+
+/* Header back and forward arrows on the sign-up page. */
+.arrows {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-right: 4px;
+}
+
+.arrow {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 50%;
+  background: transparent;
+  color: #fff;
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.arrow:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.arrow:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.arrows:empty {
+  display: none;
+}

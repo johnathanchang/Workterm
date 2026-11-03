@@ -1,7 +1,8 @@
 import { FormEvent, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { type EventName, track } from "./api";
 import AuthButtons from "./AuthButtons";
-import { PROGRAMS, SCHOOLS } from "./lists";
+import { ALL_ROLES, PROGRAMS, ROLES, SCHOOLS, suggestedRoles } from "./lists";
 import Suggest from "./Suggest";
 
 // Rule 10: questions, then "Finding your firms…", then the matched firms (the aha moment), then account, then the paywall.
@@ -10,7 +11,7 @@ type Step = "about" | "goals" | "resume" | "analyzing" | "matches" | "account" |
 // The progress bar covers the questions only.
 const STEPS: { key: Step; label: string }[] = [
   { key: "about", label: "About you" },
-  { key: "goals", label: "Your goals" },
+  { key: "goals", label: "Your roles" },
   { key: "resume", label: "Resume" },
 ];
 
@@ -27,19 +28,6 @@ const STEP_EVENTS: Partial<Record<Step, EventName>> = {
 const FINDING = ["Reading your goals", "Checking your resume", "Searching firms near you", "Ranking your best fits"];
 const FINDING_MS = 700;
 
-// Example firm types for each job area. These are a preview, not real matches: real ones come from the AI in Phase 5.
-const FIRM_TYPES: Record<string, string[]> = {
-  Software: ["A fintech startup", "A cloud software company", "A video game studio"],
-  Data: ["A big bank", "An insurance company", "A retail analytics team"],
-  Marketing: ["A consumer brand", "A marketing agency", "A sports team"],
-  Finance: ["An investment firm", "A big bank", "An accounting firm"],
-  Mechanical: ["An auto parts maker", "A robotics startup", "An aerospace supplier"],
-  Electrical: ["A power utility", "A chip design firm", "An electric vehicle startup"],
-  Design: ["A design studio", "A health tech startup", "A media company"],
-  Product: ["A SaaS startup", "A delivery app", "A travel app"],
-  Research: ["An AI lab", "A university lab", "A biotech company"],
-};
-
 // "Software, Data and Design"
 const listOf = (items: string[]) => (items.length < 2 ? items.join("") : `${items.slice(0, -1).join(", ")} and ${items[items.length - 1]}`);
 
@@ -52,12 +40,13 @@ function exampleMatches(jobs: string[], where: string, program: string): Match[]
   for (let round = 0; round < 3 && out.length < 6; round++) {
     for (const job of jobs) {
       if (out.length >= 6) break;
-      const firm = (FIRM_TYPES[job] ?? [`A ${job.toLowerCase()} company`, `A ${job.toLowerCase()} startup`, `A ${job.toLowerCase()} lab`])[round];
+      // A role the student typed in gets plain firm types.
+      const firm = (ROLES[job] ?? [`A ${job.toLowerCase()} team`, `A startup hiring for ${job.toLowerCase()}`, `A company hiring for ${job.toLowerCase()}`])[round];
       if (!firm || out.some((m) => m.firm === firm)) continue;
       const n = out.length;
       const why = [
-        `Fits your ${job.toLowerCase()} goal${program ? ` and your ${program} program` : ""}.`,
-        place ? `${place === "Remote" ? "Works remotely" : `Close to ${place}`}, and a fit for your ${job.toLowerCase()} goal.` : `A fit for your ${job.toLowerCase()} goal.`,
+        `Fits your ${job} goal${program ? ` and your ${program} program` : ""}.`,
+        place ? `${place === "Remote" ? "Works remotely" : `Close to ${place}`}, and a fit for your ${job} goal.` : `A fit for your ${job} goal.`,
         `Small team that hires students without posting jobs.`,
       ][n % 3];
       out.push({ firm, role: `${job} co-op`, fit: 94 - n * 4, why, hidden: n % 3 === 2 });
@@ -66,7 +55,8 @@ function exampleMatches(jobs: string[], where: string, program: string): Match[]
   return out;
 }
 
-const SUGGESTED = ["Software", "Data", "Marketing", "Finance", "Mechanical", "Electrical", "Design", "Product", "Research"];
+// Fewer roles make sharper tailored resumes.
+const MAX_ROLES = 3;
 const LEVELS = ["1st year", "2nd year", "3rd year", "4th year", "5th year or later", "Graduate student"];
 
 // Co-op terms from the one after today's through Winter 2030. Terms are 4 months: Jan-Apr, May-Aug, Sep-Dec.
@@ -99,8 +89,12 @@ export default function Onboarding() {
   const [term, setTerm] = useState("");
   const [jobs, setJobs] = useState<string[]>([]);
   const [custom, setCustom] = useState("");
+  const [adding, setAdding] = useState(false);
+  const [moreRoles, setMoreRoles] = useState(false);
   const [where, setWhere] = useState("");
   const [file, setFile] = useState<File | null>(null);
+  // "Edit" on the summary sends the student to one screen, then straight back to the summary.
+  const [returnTo, setReturnTo] = useState<Step | null>(null);
   const [found, setFound] = useState(0);
   const [plan, setPlan] = useState<"free" | "pro">("pro");
   const terms = upcomingTerms();
@@ -157,26 +151,100 @@ export default function Onboarding() {
     };
   }, []);
 
+  // Each screen is a browser history entry, so the header arrows and the browser's own back and forward step through
+  // sign-up. "Finding your firms…" replaces itself with the matches, so going back from the matches lands on the resume.
+  const fromHistory = useRef(false);
+  const lastStep = useRef<Step | null>(null);
+  useEffect(() => {
+    const prev = lastStep.current;
+    // StrictMode runs this twice on the first render in dev. Same step means nothing new to record.
+    if (prev === step) return;
+    lastStep.current = step;
+    if (fromHistory.current) {
+      fromHistory.current = false;
+      return;
+    }
+    const entry = { step };
+    if (prev === null || (prev === "analyzing" && step === "matches")) history.replaceState(entry, "");
+    else history.pushState(entry, "");
+  }, [step]);
+  useEffect(() => {
+    const onPop = (e: PopStateEvent) => {
+      const to = (e.state as { step?: Step } | null)?.step;
+      if (!to || to === "analyzing") return;
+      fromHistory.current = true;
+      setReturnTo(null);
+      setStep(to);
+    };
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, []);
+
   // Each new screen starts at the top of the page.
   useEffect(() => {
     window.scrollTo(0, 0);
     setBubble(null);
   }, [step]);
 
-  const toggle = (j: string) => setJobs((cur) => (cur.includes(j) ? cur.filter((x) => x !== j) : [...cur, j]));
+  const full = jobs.length >= MAX_ROLES;
+  const toggle = (j: string) =>
+    setJobs((cur) => (cur.includes(j) ? cur.filter((x) => x !== j) : cur.length < MAX_ROLES ? [...cur, j] : cur));
 
   function addCustom(e: FormEvent) {
     e.preventDefault();
     const v = custom.trim().slice(0, 40);
-    if (v && !jobs.includes(v)) setJobs([...jobs, v]);
+    if (v && !jobs.includes(v) && !full) setJobs([...jobs, v]);
     setCustom("");
+    setAdding(false);
   }
 
+  // Roles that fit the program first, then the student's own, then (on "See more") every other role A to Z.
+  const suggested = suggestedRoles(program);
+  const ownRoles = jobs.filter((j) => !suggested.includes(j) && !ALL_ROLES.includes(j));
+  const otherRoles = ALL_ROLES.filter((r) => !suggested.includes(r));
+  const roleChips = [...suggested, ...ownRoles, ...otherRoles.filter((r) => moreRoles || jobs.includes(r))];
+
   const idx = STEPS.findIndex((s) => s.key === step);
-  const back = idx > 0 ? () => setStep(STEPS[idx - 1].key) : undefined;
+  const go = (to: Step) => {
+    setStep(returnTo ?? to);
+    setReturnTo(null);
+  };
+  const edit = (to: Step) => {
+    setReturnTo("done");
+    setStep(to);
+  };
+  const back = idx > 0 ? () => history.back() : () => (window.location.hash = "#/");
+
+  // Header arrows. First screen: next only. Summary: back only. "Finding your firms…": none.
+  // Next does what the screen's main button does, so the "fill out this field" bubble still shows.
+  const [arrowSlot, setArrowSlot] = useState<HTMLElement | null>(null);
+  useEffect(() => setArrowSlot(document.getElementById("header-arrows")), []);
+  const showBack = step !== "about" && step !== "analyzing";
+  const showNext = step !== "done" && step !== "analyzing";
+  const nextDisabled = step === "goals" && jobs.length === 0;
+  function next() {
+    if (step === "matches") setStep("account");
+    else if (step === "account") go("plans");
+    else cardRef.current?.querySelector("form")?.requestSubmit();
+  }
+  const arrows = (
+    <>
+      {showBack && (
+        <button type="button" className="arrow" aria-label="Back" onClick={() => history.back()}>
+          ←
+        </button>
+      )}
+      {showNext && (
+        <button type="button" className="arrow" aria-label="Next" disabled={nextDisabled} onClick={next}>
+          →
+        </button>
+      )}
+    </>
+  );
 
   return (
     <main className="authpage">
+      {arrowSlot && createPortal(arrows, arrowSlot)}
       <div className="card authcard wide" ref={cardRef}>
         {bubble && (
           <p className="field-bubble" role="alert" style={{ top: bubble.top, left: bubble.left }}>
@@ -187,7 +255,15 @@ export default function Onboarding() {
           <ol className="progress" aria-label="Sign up progress">
             {STEPS.map((s, i) => (
               <li key={s.key} className={i < idx ? "done" : i === idx ? "now" : ""} aria-current={i === idx ? "step" : undefined}>
-                <span>{i + 1}</span> {s.label}
+                {i < idx ? (
+                  <button type="button" className="linkish plain" onClick={() => setStep(s.key)}>
+                    <span>{i + 1}</span> {s.label}
+                  </button>
+                ) : (
+                  <>
+                    <span>{i + 1}</span> {s.label}
+                  </>
+                )}
               </li>
             ))}
           </ol>
@@ -198,7 +274,7 @@ export default function Onboarding() {
             className="stack"
             onSubmit={(e) => {
               e.preventDefault();
-              setStep("goals");
+              go("goals");
             }}
           >
             <h1 className="authtitle">Tell us about you</h1>
@@ -235,7 +311,7 @@ export default function Onboarding() {
                 </select>
               </label>
             </div>
-            <Nav back={back} />
+            <Nav back={back} backLabel={idx === 0 ? "Home" : undefined} />
           </form>
         )}
 
@@ -244,36 +320,58 @@ export default function Onboarding() {
             className="stack"
             onSubmit={(e) => {
               e.preventDefault();
-              if (jobs.length > 0) setStep("resume");
+              if (jobs.length > 0) go("resume");
             }}
           >
-            <h1 className="authtitle">What jobs do you want?</h1>
-            <p className="lead small">Pick a few, or add your own. You can change this later.</p>
-            <div className="chips" role="group" aria-label="Job areas">
-              {[...SUGGESTED, ...jobs.filter((j) => !SUGGESTED.includes(j))].map((j) => (
-                <button
-                  type="button"
-                  key={j}
-                  className={jobs.includes(j) ? "chip on" : "chip"}
-                  aria-pressed={jobs.includes(j)}
-                  onClick={() => toggle(j)}
-                >
-                  {j}
+            <h1 className="authtitle">What roles are you aiming for?</h1>
+            <p className="lead small">Pick up to 3. We'll tailor your resume to them. You can change this later.</p>
+            <div className="chips role-chips" role="group" aria-label="Roles">
+              {roleChips.map((j) => {
+                const on = jobs.includes(j);
+                return (
+                  <button
+                    type="button"
+                    key={j}
+                    className={on ? "chip on" : full ? "chip off" : "chip"}
+                    aria-pressed={on}
+                    aria-disabled={!on && full}
+                    onClick={() => toggle(j)}
+                  >
+                    {on && <Check />}
+                    {j}
+                  </button>
+                );
+              })}
+              {adding ? (
+                <span className="addrow">
+                  <input
+                    autoFocus
+                    value={custom}
+                    onChange={(e) => setCustom(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") addCustom(e);
+                      if (e.key === "Escape") setAdding(false);
+                    }}
+                    placeholder="Like Robotics"
+                    aria-label="Your own role"
+                    maxLength={40}
+                  />
+                  <button type="button" className="ghost" onClick={addCustom}>
+                    Add
+                  </button>
+                </span>
+              ) : (
+                <button type="button" className="chip add" disabled={full} onClick={() => setAdding(true)}>
+                  + Add your own
                 </button>
-              ))}
+              )}
             </div>
-            <div className="addrow">
-              <input
-                value={custom}
-                onChange={(e) => setCustom(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && addCustom(e)}
-                placeholder="Something else, like Robotics"
-                aria-label="Add another job area"
-              />
-              <button type="button" className="ghost" onClick={addCustom}>
-                Add
+            <p className="role-count" aria-live="polite">
+              {full ? "3 of 3 picked. Tap one to swap it out." : `${jobs.length} of 3 picked`}
+              <button type="button" className="linkish" onClick={() => setMoreRoles(!moreRoles)} aria-expanded={moreRoles}>
+                {moreRoles ? "Show fewer roles" : "See more roles"}
               </button>
-            </div>
+            </p>
             <label>
               Where <span className="opt">(city or remote, optional)</span>
               <input value={where} onChange={(e) => setWhere(e.target.value)} placeholder="Toronto, Remote" maxLength={100} />
@@ -287,17 +385,17 @@ export default function Onboarding() {
             className="stack"
             onSubmit={(e) => {
               e.preventDefault();
-              setStep("analyzing");
+              go("analyzing");
             }}
           >
             <h1 className="authtitle">Upload your resume</h1>
             <p className="lead small">
-              We rate it against the jobs you picked. Your resume stays in your browser in this preview.
+              We rate it against the roles you picked. Your resume stays in your browser in this preview.
             </p>
             <label className="drop">
               <span>Resume</span>
               <input type="file" accept=".pdf,.doc,.docx,.txt" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
-              <small>PDF, Word or text</small>
+              <small>{file ? `Added: ${file.name}. Choose another to replace it.` : "PDF, Word or text"}</small>
             </label>
             <Nav back={back} next={file ? "Find my firms" : "Skip and find my firms"} />
           </form>
@@ -343,6 +441,7 @@ export default function Onboarding() {
             </ol>
             <p className="notice">Preview: these are examples. Real matches from your resume arrive when Workterm opens.</p>
             <div className="nav">
+              <BackButton onClick={() => history.back()} />
               <button type="button" onClick={() => setStep("account")}>
                 Save my matches
               </button>
@@ -354,8 +453,11 @@ export default function Onboarding() {
           <div className="stack">
             <h1 className="authtitle">Save your matches</h1>
             <p className="lead small">Sign up with your school account to keep your matches and start applying.</p>
-            <AuthButtons verb="Sign up" onPick={() => setStep("plans")} />
+            <AuthButtons verb="Sign up" onPick={() => go("plans")} />
             <p className="notice">Preview: this does not create an account yet.</p>
+            <div className="nav">
+              <BackButton onClick={() => history.back()} />
+            </div>
             <p className="fine center">
               Already have an account? <a href="#/login">Log in</a>
             </p>
@@ -368,7 +470,7 @@ export default function Onboarding() {
             onSubmit={(e) => {
               e.preventDefault();
               if (plan === "pro") track("trial_start_click");
-              setStep("done");
+              go("done");
             }}
           >
             <h1 className="authtitle">Choose your plan</h1>
@@ -405,7 +507,7 @@ export default function Onboarding() {
                 </ul>
               </label>
             </div>
-            <button type="submit">{plan === "pro" ? "Start free trial" : "Continue with Free"}</button>
+            <Nav back={() => history.back()} next={plan === "pro" ? "Start free trial" : "Continue with Free"} />
             <p className="fine center">Cancel anytime. We remind you before your trial ends. We cannot promise a placement.</p>
             <p className="notice">Preview: no payment is taken. Payments open when Workterm opens.</p>
           </form>
@@ -417,22 +519,40 @@ export default function Onboarding() {
             <ul className="summary">
               <li>
                 <span>Name</span> {name}
+                <button type="button" className="linkish edit" onClick={() => edit("about")} aria-label="Edit name">
+                  Edit
+                </button>
               </li>
               <li>
                 <span>School</span> {school}, {program}, {level}
+                <button type="button" className="linkish edit" onClick={() => edit("about")} aria-label="Edit school">
+                  Edit
+                </button>
               </li>
               <li>
                 <span>Next term</span> {term}
+                <button type="button" className="linkish edit" onClick={() => edit("about")} aria-label="Edit next term">
+                  Edit
+                </button>
               </li>
               <li>
-                <span>Jobs</span> {jobs.join(", ")}
+                <span>Roles</span> {jobs.join(", ")}
                 {where ? ` · ${where}` : ""}
+                <button type="button" className="linkish edit" onClick={() => edit("goals")} aria-label="Edit roles">
+                  Edit
+                </button>
               </li>
               <li>
                 <span>Resume</span> {file ? file.name : "Not added yet"}
+                <button type="button" className="linkish edit" onClick={() => edit("resume")} aria-label="Edit resume">
+                  Edit
+                </button>
               </li>
               <li>
                 <span>Plan</span> {plan === "pro" ? "Pro, free trial" : "Free"}
+                <button type="button" className="linkish edit" onClick={() => edit("plans")} aria-label="Edit plan">
+                  Edit
+                </button>
               </li>
             </ul>
             <p className="notice">
@@ -448,14 +568,24 @@ export default function Onboarding() {
   );
 }
 
-function Nav({ back, next = "Continue", disabled }: { back?: () => void; next?: string; disabled?: boolean }) {
+const Check = () => (
+  <svg width="12" height="12" viewBox="0 0 16 16" aria-hidden="true">
+    <path d="M3 8.5l3 3 7-7" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+);
+
+function BackButton({ onClick, label = "Back" }: { onClick: () => void; label?: string }) {
+  return (
+    <button type="button" className="ghost back" onClick={onClick}>
+      <span aria-hidden="true">←</span> {label}
+    </button>
+  );
+}
+
+function Nav({ back, backLabel, next = "Continue", disabled }: { back?: () => void; backLabel?: string; next?: string; disabled?: boolean }) {
   return (
     <div className="nav">
-      {back && (
-        <button type="button" className="ghost" onClick={back}>
-          Back
-        </button>
-      )}
+      {back && <BackButton onClick={back} label={backLabel} />}
       <button type="submit" disabled={disabled}>
         {next}
       </button>

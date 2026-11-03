@@ -50,6 +50,8 @@ export default function App() {
           Workterm
         </a>
         <nav className="auth" aria-label="Account">
+          {/* The sign-up page puts its back and next arrows here. */}
+          <span id="header-arrows" className="arrows" />
           <a className="btn ghost" href="#/login">
             Log in
           </a>
