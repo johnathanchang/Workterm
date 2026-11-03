@@ -681,21 +681,6 @@ select:focus-visible {
   flex: 1;
 }
 
-.drop {
-  padding: 16px;
-  border: 1px dashed var(--line);
-  border-radius: 12px;
-}
-
-.drop input {
-  padding: 8px;
-}
-
-.drop small {
-  font-weight: 400;
-  color: var(--muted);
-}
-
 .analyzing {
   display: grid;
   justify-items: center;
@@ -1739,4 +1724,61 @@ select:focus-visible {
 
 .arrows:empty {
   display: none;
+}
+
+/* Resume step: one row with the "Choose file" button and the file name. */
+.drop {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px;
+  border: 1px dashed var(--line);
+  border-radius: 12px;
+  font-weight: 400;
+  cursor: pointer;
+}
+
+.drop.has-file {
+  border-style: solid;
+}
+
+.drop:focus-within {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.drop-btn {
+  flex: none;
+  padding: 10px 16px;
+  border-radius: 10px;
+  background: var(--btn);
+  color: #3b0000;
+  font-weight: 700;
+  transition: filter 0.15s ease;
+}
+
+.drop:hover .drop-btn {
+  filter: brightness(0.95);
+}
+
+.drop-name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  overflow: hidden;
+  font-size: 0.92rem;
+  color: var(--muted);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.has-file .drop-name {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.has-file .drop-name svg {
+  flex: none;
+  color: #1f9d55;
 }

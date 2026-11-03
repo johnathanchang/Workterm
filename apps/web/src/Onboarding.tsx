@@ -389,15 +389,27 @@ export default function Onboarding() {
             }}
           >
             <h1 className="authtitle">Upload your resume</h1>
-            <p className="lead small">
-              We rate it against the roles you picked. Your resume stays in your browser in this preview.
-            </p>
-            <label className="drop">
-              <span>Resume</span>
-              <input type="file" accept=".pdf,.doc,.docx,.txt" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
-              <small>{file ? `Added: ${file.name}. Choose another to replace it.` : "PDF, Word or text"}</small>
+            <p className="lead small">We rate it against your roles. In this preview, it stays in your browser.</p>
+            {/* Our own button and file name in one row. The browser's file box is hidden but still works with the keyboard. */}
+            <label className={file ? "drop has-file" : "drop"}>
+              <input
+                type="file"
+                className="visually-hidden"
+                accept=".pdf,.doc,.docx,.txt"
+                onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+              />
+              <span className="drop-btn">{file ? "Replace" : "Choose file"}</span>
+              <span className="drop-name">
+                {file ? (
+                  <>
+                    <Check /> {file.name}
+                  </>
+                ) : (
+                  "PDF, Word or text"
+                )}
+              </span>
             </label>
-            <Nav back={back} next={file ? "Find my firms" : "Skip and find my firms"} />
+            <Nav back={back} next={file ? "Find matching companies" : "Skip and find matching companies"} />
           </form>
         )}
 
