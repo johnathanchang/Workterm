@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import Blog, { POSTS } from "./Blog";
+import Competitor, { RIVALS } from "./Competitors";
 import Home from "./Home";
 import Login from "./Login";
 import Onboarding from "./Onboarding";
@@ -7,7 +8,7 @@ import Privacy from "./Privacy";
 import Refund from "./Refund";
 import Terms from "./Terms";
 
-// Tiny hash router: #/login, #/signup, #/blog/<slug>, #/terms, #/privacy and #/refund. No router library needed yet.
+// Tiny hash router: #/login, #/signup, #/blog/<slug>, #/terms, #/privacy, #/refund and #/compare/<slug>. No router library needed yet.
 function useRoute(): string {
   const read = () => window.location.hash.replace(/^#/, "") || "/";
   const [route, setRoute] = useState(read);
@@ -71,6 +72,8 @@ export default function App() {
         <Privacy />
       ) : route === "/refund" ? (
         <Refund />
+      ) : route.startsWith("/compare") ? (
+        <Competitor slug={route.replace(/^\/compare\/?/, "")} />
       ) : route.startsWith("/blog") ? (
         <Blog slug={route.replace(/^\/blog\/?/, "")} />
       ) : (
@@ -92,6 +95,14 @@ export default function App() {
             {PRODUCT_LINKS.map((l) => (
               <a key={l.id} href="#/" onClick={(e) => goToSection(e, l.id)}>
                 {l.label}
+              </a>
+            ))}
+          </nav>
+          <nav className="footcol" aria-labelledby="foot-compare">
+            <h2 id="foot-compare">Compare</h2>
+            {RIVALS.map((r) => (
+              <a key={r.slug} href={`#/compare/${r.slug}`}>
+                Workterm vs {r.name}
               </a>
             ))}
           </nav>

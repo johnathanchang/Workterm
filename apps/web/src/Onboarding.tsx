@@ -87,7 +87,7 @@ export default function Onboarding() {
   // Read in the first render, cleared after. StrictMode runs the first render twice in dev, so clearing must wait.
   const [prefill] = useState(readPrefill);
   useEffect(clearPrefill, []);
-  const [name, setName] = useState("");
+  const [name, setName] = useState(prefill.name ?? "");
   const [school, setSchool] = useState(prefill.school ?? "");
   const [program, setProgram] = useState(prefill.program ?? "");
   const [level, setLevel] = useState("");

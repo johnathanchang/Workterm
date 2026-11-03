@@ -2,7 +2,7 @@
 // Kept in sessionStorage (this tab only, gone when it closes), never in the URL, so it stays out of browser history.
 const KEY = "workterm.prefill";
 
-export type Prefill = { school: string; program: string };
+export type Prefill = { name: string; school: string; program: string };
 
 export function savePrefill(p: Prefill): void {
   try {

@@ -408,10 +408,10 @@ footer {
   color: var(--muted);
 }
 
-/* Footer on every page: guides on the left, product in the middle, legal on the right. */
+/* Footer on every page: four columns spaced evenly across the width. */
 .footcols {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  display: flex;
+  justify-content: space-between;
   gap: 24px;
 }
 
@@ -421,12 +421,8 @@ footer {
   gap: 8px;
 }
 
-.footcol:first-child {
+.footcol {
   text-align: left;
-}
-
-.footcol:last-child {
-  text-align: right;
 }
 
 .footcol h2 {
@@ -456,12 +452,11 @@ footer {
 
 @media (max-width: 640px) {
   .footcols {
-    grid-template-columns: 1fr;
+    flex-direction: column;
     gap: 28px;
   }
 
-  .footcol:first-child,
-  .footcol:last-child {
+  .footcol {
     text-align: center;
   }
 }

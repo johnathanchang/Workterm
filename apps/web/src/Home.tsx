@@ -1,11 +1,11 @@
 import { FormEvent, useEffect, useRef, useState } from "react";
-import { joinWaitlist, track } from "./api";
+import { track } from "./api";
 import { Compare, CreateProfile, HowItWorks } from "./HowItWorks";
 import { PROGRAMS, SCHOOLS } from "./lists";
 import { savePrefill } from "./prefill";
 import Suggest from "./Suggest";
 
-type Status = "idle" | "sending" | "invalid_email" | "missing";
+type Status = "idle" | "sending" | "missing";
 
 // ?src=tiktok in the link tells us which post brought the visitor.
 const source = new URLSearchParams(window.location.search).get("src")?.slice(0, 50) || undefined;
@@ -61,7 +61,7 @@ const COMPANIES: { name: string; slug: string; fill: string; local?: boolean }[]
 const iconUrl = (c: { slug: string; local?: boolean }) => (c.local ? `/logos/${c.slug}.svg` : `${ICONS}/${c.slug}.svg`);
 
 export default function Home() {
-  const [email, setEmail] = useState("");
+  const [name, setName] = useState("");
   const [school, setSchool] = useState("");
   const [program, setProgram] = useState("");
   const [status, setStatus] = useState<Status>("idle");
@@ -110,17 +110,14 @@ export default function Home() {
     };
   }, []);
 
-  async function onSubmit(e: FormEvent) {
+  function onSubmit(e: FormEvent) {
     e.preventDefault();
     if (status === "sending") return;
-    if (!school.trim() || !program.trim()) return setStatus("missing");
+    if (!name.trim() || !school.trim() || !program.trim()) return setStatus("missing");
     setStatus("sending");
     track("waitlist_signup_click", source);
-    // Still join the waitlist, so we can email them about launch. If our server is down, they go on to sign up anyway.
-    const result = await joinWaitlist({ email, school: school.trim(), program: program.trim(), source });
-    if (result === "invalid_email") return setStatus("invalid_email");
     // Carry their answers into sign-up, so they don't type them twice.
-    savePrefill({ school: school.trim(), program: program.trim() });
+    savePrefill({ name: name.trim(), school: school.trim(), program: program.trim() });
     window.location.hash = "#/signup";
   }
 
@@ -174,14 +171,13 @@ export default function Home() {
           <h2 className="join">Your internship awaits.</h2>
           <form className="card" onSubmit={onSubmit} noValidate>
             <label>
-              Email
+              Name
               <input
-                type="email"
-                inputMode="email"
-                autoComplete="email"
-                placeholder="you@school.edu"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                type="text"
+                autoComplete="name"
+                placeholder="Your full name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
                 required
               />
             </label>
@@ -192,11 +188,7 @@ export default function Home() {
             <button type="submit" className="cta" disabled={status === "sending"}>
               {status === "sending" ? "Starting…" : "Start now"}
             </button>
-            {status === "missing" && <p className="error">Please fill in your school and program.</p>}
-            {status === "invalid_email" && <p className="error">That email doesn't look right. Check it and try again.</p>}
-            <p className="fine">
-              By joining, you agree that Workterm may email you about updates, changes, and pricing. Unsubscribe anytime.
-            </p>
+            {status === "missing" && <p className="error">Please fill in your name, school and program.</p>}
           </form>
         </section>
 
