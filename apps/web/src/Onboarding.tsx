@@ -1,6 +1,8 @@
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { type EventName, track } from "./api";
 import AuthButtons from "./AuthButtons";
+import { PROGRAMS, SCHOOLS } from "./lists";
+import Suggest from "./Suggest";
 
 // Rule 10: questions, then "Finding your firms…", then the matched firms (the aha moment), then account, then the paywall.
 type Step = "about" | "goals" | "resume" | "analyzing" | "matches" | "account" | "plans" | "done";
@@ -67,19 +69,23 @@ function exampleMatches(jobs: string[], where: string, program: string): Match[]
 const SUGGESTED = ["Software", "Data", "Marketing", "Finance", "Mechanical", "Electrical", "Design", "Product", "Research"];
 const LEVELS = ["1st year", "2nd year", "3rd year", "4th year", "5th year or later", "Graduate student"];
 
-// The next four co-op terms, starting with the one after today's. Terms are 4 months: Jan-Apr, May-Aug, Sep-Dec.
+// Co-op terms from the one after today's through Winter 2030. Terms are 4 months: Jan-Apr, May-Aug, Sep-Dec.
+const LAST_TERM = "Winter 2030";
+
 function upcomingTerms(): string[] {
   const names = ["Winter", "Summer", "Fall"];
   const now = new Date();
   let year = now.getFullYear();
   let idx = Math.floor(now.getMonth() / 4) + 1;
   const out: string[] = [];
-  for (let i = 0; i < 4; i++, idx++) {
+  while (out.length < 30) {
     if (idx > 2) {
       idx = 0;
       year += 1;
     }
     out.push(`${names[idx]} ${year}`);
+    if (out[out.length - 1] === LAST_TERM) break;
+    idx++;
   }
   return out;
 }
@@ -158,14 +164,8 @@ export default function Onboarding() {
             }}
           >
             <h1 className="authtitle">Tell us about you</h1>
-            <label>
-              School
-              <input value={school} onChange={(e) => setSchool(e.target.value)} placeholder="Your school" maxLength={100} required />
-            </label>
-            <label>
-              Program
-              <input value={program} onChange={(e) => setProgram(e.target.value)} placeholder="Your program" maxLength={100} required />
-            </label>
+            <Suggest label="School" options={SCHOOLS} value={school} onChange={setSchool} placeholder="Start typing your school" />
+            <Suggest label="Program" options={PROGRAMS} value={program} onChange={setProgram} placeholder="Start typing your program" />
             <div className="row">
               <label>
                 Year of study

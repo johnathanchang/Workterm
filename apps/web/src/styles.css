@@ -1532,3 +1532,37 @@ select:focus-visible {
   padding-left: 18px;
   font-size: 0.9rem;
 }
+
+/* Type-to-filter dropdown for School and Program on the sign-up page. */
+.suggest {
+  position: relative;
+}
+
+.suggest-list {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  left: 0;
+  z-index: 5;
+  max-height: 240px;
+  margin: 4px 0 0;
+  padding: 4px;
+  overflow-y: auto;
+  list-style: none;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: 0 12px 30px -12px rgba(0, 0, 0, 0.35);
+  font-weight: 400;
+}
+
+.suggest-list li {
+  padding: 9px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.suggest-list li:hover,
+.suggest-list li.on {
+  background: var(--accent-soft);
+}
