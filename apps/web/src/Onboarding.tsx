@@ -221,10 +221,16 @@ export default function Onboarding() {
   useEffect(() => setArrowSlot(document.getElementById("header-arrows")), []);
   const showBack = step !== "about" && step !== "analyzing";
   const showNext = step !== "done" && step !== "analyzing";
-  const nextDisabled = step === "goals" && jobs.length === 0;
+  // → is faded until the screen is done. The resume is optional, and signing up must be done with a sign-up button.
+  const stepDone: Partial<Record<Step, boolean>> = {
+    about: [name, school, program, level, term].every((v) => v.trim() !== ""),
+    goals: jobs.length > 0,
+    account: false,
+  };
+  const nextDisabled = stepDone[step] === false;
   function next() {
+    if (nextDisabled) return;
     if (step === "matches") setStep("account");
-    else if (step === "account") go("plans");
     else cardRef.current?.querySelector("form")?.requestSubmit();
   }
   const arrows = (
@@ -235,7 +241,14 @@ export default function Onboarding() {
         </button>
       )}
       {showNext && (
-        <button type="button" className="arrow" aria-label="Next" disabled={nextDisabled} onClick={next}>
+        <button
+          type="button"
+          className="arrow"
+          aria-label="Next"
+          title={nextDisabled ? (step === "account" ? "Sign up to continue" : "Finish this step first") : "Next"}
+          disabled={nextDisabled}
+          onClick={next}
+        >
           →
         </button>
       )}
