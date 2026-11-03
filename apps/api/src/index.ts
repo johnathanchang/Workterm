@@ -8,7 +8,18 @@ interface Env {
 
 const MAX_BODY_BYTES = 2_000;
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const ALLOWED_EVENTS = new Set(["page_view", "waitlist_view", "waitlist_signup_click"]);
+const ALLOWED_EVENTS = new Set([
+  "page_view",
+  "waitlist_view",
+  "waitlist_signup_click",
+  // Onboarding funnel (rule 10).
+  "onboarding_started",
+  "firm_matched",
+  "account_view",
+  "paywall_view",
+  "trial_start_click",
+  "onboarding_completed",
+]);
 
 export default {
   async fetch(request, env, ctx): Promise<Response> {

@@ -1,14 +1,68 @@
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
+import { type EventName, track } from "./api";
 import AuthButtons from "./AuthButtons";
 
-type Step = "account" | "about" | "goals" | "resume" | "analyzing" | "done";
+// Rule 10: questions, then "Finding your firms…", then the matched firms (the aha moment), then account, then the paywall.
+type Step = "about" | "goals" | "resume" | "analyzing" | "matches" | "account" | "plans" | "done";
 
+// The progress bar covers the questions only.
 const STEPS: { key: Step; label: string }[] = [
-  { key: "account", label: "Account" },
   { key: "about", label: "About you" },
   { key: "goals", label: "Your goals" },
   { key: "resume", label: "Resume" },
 ];
+
+// The funnel event sent when each screen first shows.
+const STEP_EVENTS: Partial<Record<Step, EventName>> = {
+  about: "onboarding_started",
+  matches: "firm_matched",
+  account: "account_view",
+  plans: "paywall_view",
+  done: "onboarding_completed",
+};
+
+// Lines that tick off one by one on the "Finding your firms…" screen.
+const FINDING = ["Reading your goals", "Checking your resume", "Searching firms near you", "Ranking your best fits"];
+const FINDING_MS = 700;
+
+// Example firm types for each job area. These are a preview, not real matches: real ones come from the AI in Phase 5.
+const FIRM_TYPES: Record<string, string[]> = {
+  Software: ["A fintech startup", "A cloud software company", "A video game studio"],
+  Data: ["A big bank", "An insurance company", "A retail analytics team"],
+  Marketing: ["A consumer brand", "A marketing agency", "A sports team"],
+  Finance: ["An investment firm", "A big bank", "An accounting firm"],
+  Mechanical: ["An auto parts maker", "A robotics startup", "An aerospace supplier"],
+  Electrical: ["A power utility", "A chip design firm", "An electric vehicle startup"],
+  Design: ["A design studio", "A health tech startup", "A media company"],
+  Product: ["A SaaS startup", "A delivery app", "A travel app"],
+  Research: ["An AI lab", "A university lab", "A biotech company"],
+};
+
+// "Software, Data and Design"
+const listOf = (items: string[]) => (items.length < 2 ? items.join("") : `${items.slice(0, -1).join(", ")} and ${items[items.length - 1]}`);
+
+type Match = { firm: string; role: string; fit: number; why: string; hidden: boolean };
+
+// Up to six example matches, spread across the job areas the student picked.
+function exampleMatches(jobs: string[], where: string, program: string): Match[] {
+  const place = where.split(",")[0].trim();
+  const out: Match[] = [];
+  for (let round = 0; round < 3 && out.length < 6; round++) {
+    for (const job of jobs) {
+      if (out.length >= 6) break;
+      const firm = (FIRM_TYPES[job] ?? [`A ${job.toLowerCase()} company`, `A ${job.toLowerCase()} startup`, `A ${job.toLowerCase()} lab`])[round];
+      if (!firm || out.some((m) => m.firm === firm)) continue;
+      const n = out.length;
+      const why = [
+        `Fits your ${job.toLowerCase()} goal${program ? ` and your ${program} program` : ""}.`,
+        place ? `${place === "Remote" ? "Works remotely" : `Close to ${place}`}, and a fit for your ${job.toLowerCase()} goal.` : `A fit for your ${job.toLowerCase()} goal.`,
+        `Small team that hires students without posting jobs.`,
+      ][n % 3];
+      out.push({ firm, role: `${job} co-op`, fit: 94 - n * 4, why, hidden: n % 3 === 2 });
+    }
+  }
+  return out;
+}
 
 const SUGGESTED = ["Software", "Data", "Marketing", "Finance", "Mechanical", "Electrical", "Design", "Product", "Research"];
 const LEVELS = ["1st year", "2nd year", "3rd year", "4th year", "5th year or later", "Graduate student"];
@@ -31,7 +85,7 @@ function upcomingTerms(): string[] {
 }
 
 export default function Onboarding() {
-  const [step, setStep] = useState<Step>("account");
+  const [step, setStep] = useState<Step>("about");
   const [school, setSchool] = useState("");
   const [program, setProgram] = useState("");
   const [level, setLevel] = useState("");
@@ -40,12 +94,34 @@ export default function Onboarding() {
   const [custom, setCustom] = useState("");
   const [where, setWhere] = useState("");
   const [file, setFile] = useState<File | null>(null);
+  const [found, setFound] = useState(0);
+  const [plan, setPlan] = useState<"free" | "pro">("pro");
   const terms = upcomingTerms();
+  const matches = exampleMatches(jobs, where, program);
 
+  // One event per step reached. StrictMode runs effects twice in dev, so the ref keeps each to one.
+  const seen = useRef(new Set<Step>());
+  useEffect(() => {
+    if (seen.current.has(step)) return;
+    seen.current.add(step);
+    const event = STEP_EVENTS[step];
+    if (event) track(event);
+  }, [step]);
+
+  // Tick the "Finding your firms…" lines, then show the matches.
   useEffect(() => {
     if (step !== "analyzing") return;
-    const t = setTimeout(() => setStep("done"), 2200);
-    return () => clearTimeout(t);
+    setFound(0);
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const tick = reduce ? 300 : FINDING_MS;
+    const timers = FINDING.map((_, i) => setTimeout(() => setFound(i + 1), tick * (i + 1)));
+    timers.push(setTimeout(() => setStep("matches"), tick * (FINDING.length + 1)));
+    return () => timers.forEach(clearTimeout);
+  }, [step]);
+
+  // Each new screen starts at the top of the page.
+  useEffect(() => {
+    window.scrollTo(0, 0);
   }, [step]);
 
   const toggle = (j: string) => setJobs((cur) => (cur.includes(j) ? cur.filter((x) => x !== j) : [...cur, j]));
@@ -71,21 +147,6 @@ export default function Onboarding() {
               </li>
             ))}
           </ol>
-        )}
-
-        {step === "account" && (
-          <>
-            <h1 className="authtitle">Create your account</h1>
-            <p className="lead small">Sign up with your school account. It takes about two minutes.</p>
-            <AuthButtons
-              verb="Sign up"
-              onPick={() => setStep("about")}
-            />
-            <p className="notice">Preview: this does not create an account yet. It shows the sign-up steps.</p>
-            <p className="fine center">
-              Already have an account? <a href="#/login">Log in</a>
-            </p>
-          </>
         )}
 
         {step === "about" && (
@@ -189,16 +250,116 @@ export default function Onboarding() {
               <input type="file" accept=".pdf,.doc,.docx,.txt" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
               <small>PDF, Word or text</small>
             </label>
-            <Nav back={back} next={file ? "Rate my resume" : "Skip for now"} />
+            <Nav back={back} next={file ? "Find my firms" : "Skip and find my firms"} />
           </form>
         )}
 
         {step === "analyzing" && (
           <div className="analyzing" role="status">
             <div className="spinner" aria-hidden="true" />
-            <h1 className="authtitle">Finding your matches…</h1>
-            <p className="lead small">Checking your resume against {jobs.slice(0, 3).join(", ")}.</p>
+            <h1 className="authtitle">Finding your firms…</h1>
+            <ul className="finding">
+              {FINDING.map((f, i) => (
+                <li key={f} className={i < found ? "done" : i === found ? "now" : ""}>
+                  <span className="tick" aria-hidden="true">
+                    {i < found ? "✓" : ""}
+                  </span>
+                  {f}
+                </li>
+              ))}
+            </ul>
           </div>
+        )}
+
+        {step === "matches" && (
+          <div className="stack">
+            <p className="eyebrow-small">Your matches</p>
+            <h1 className="authtitle">We found {matches.length} firms that fit you.</h1>
+            <p className="lead small">
+              Ranked by fit for {listOf(jobs.slice(0, 3))}
+              {term ? ` in ${term}` : ""}. Some of them do not post jobs, so most students never find them.
+            </p>
+            <ol className="matches">
+              {matches.map((m) => (
+                <li key={m.firm}>
+                  <div>
+                    <strong>{m.firm}</strong>
+                    <span className="match-role">{m.role}</span>
+                    <span className="match-why">{m.why}</span>
+                    {m.hidden && <span className="pill gold">Not posted</span>}
+                  </div>
+                  <span className="pill green">{m.fit}% fit</span>
+                </li>
+              ))}
+            </ol>
+            <p className="notice">Preview: these are examples. Real matches from your resume arrive when Workterm opens.</p>
+            <div className="nav">
+              <button type="button" onClick={() => setStep("account")}>
+                Save my matches
+              </button>
+            </div>
+          </div>
+        )}
+
+        {step === "account" && (
+          <div className="stack">
+            <h1 className="authtitle">Save your matches</h1>
+            <p className="lead small">Sign up with your school account to keep your matches and start applying.</p>
+            <AuthButtons verb="Sign up" onPick={() => setStep("plans")} />
+            <p className="notice">Preview: this does not create an account yet.</p>
+            <p className="fine center">
+              Already have an account? <a href="#/login">Log in</a>
+            </p>
+          </div>
+        )}
+
+        {step === "plans" && (
+          <form
+            className="stack"
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (plan === "pro") track("trial_start_click");
+              setStep("done");
+            }}
+          >
+            <h1 className="authtitle">Choose your plan</h1>
+            <p className="lead small">Start free. Upgrade when you are ready to apply to more firms.</p>
+            <div className="plans" role="radiogroup" aria-label="Plans">
+              <label className={plan === "pro" ? "plan on" : "plan"}>
+                <input type="radio" name="plan" checked={plan === "pro"} onChange={() => setPlan("pro")} />
+                <span className="plan-head">
+                  <strong>Pro</strong>
+                  <span className="pill gold">Free trial</span>
+                </span>
+                <span className="plan-price">
+                  $20 <small>a month after your trial</small>
+                </span>
+                <ul>
+                  <li>Everything in Free</li>
+                  <li>A tailored resume for every job</li>
+                  <li>Emails sent from your Gmail, after you approve</li>
+                  <li>Follow-ups and reply tracking</li>
+                </ul>
+              </label>
+              <label className={plan === "free" ? "plan on" : "plan"}>
+                <input type="radio" name="plan" checked={plan === "free"} onChange={() => setPlan("free")} />
+                <span className="plan-head">
+                  <strong>Free</strong>
+                </span>
+                <span className="plan-price">
+                  $0 <small>forever</small>
+                </span>
+                <ul>
+                  <li>See your matches</li>
+                  <li>Rate your resume</li>
+                  <li>Send 5 emails</li>
+                </ul>
+              </label>
+            </div>
+            <button type="submit">{plan === "pro" ? "Start free trial" : "Continue with Free"}</button>
+            <p className="fine center">Cancel anytime. We remind you before your trial ends. We cannot promise a placement.</p>
+            <p className="notice">Preview: no payment is taken. Payments open when Workterm opens.</p>
+          </form>
         )}
 
         {step === "done" && (
@@ -218,9 +379,12 @@ export default function Onboarding() {
               <li>
                 <span>Resume</span> {file ? file.name : "Not added yet"}
               </li>
+              <li>
+                <span>Plan</span> {plan === "pro" ? "Pro, free trial" : "Free"}
+              </li>
             </ul>
             <p className="notice">
-              Preview only: nothing was saved. Resume rating, job matches and personalized CVs open when Workterm opens.
+              Preview only: nothing was saved. Resume rating, job matches and tailored resumes open when Workterm opens.
             </p>
             <a className="btn" href="#/">
               Back to home

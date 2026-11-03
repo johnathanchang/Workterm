@@ -1,21 +1,25 @@
 // Runs the real API code against a local copy of the database. No network needed.
 import { afterAll, beforeAll, expect, test } from "bun:test";
+import { join } from "node:path";
 import { getPlatformProxy } from "wrangler";
 import worker from "../src/index";
+
+// Paths are relative to apps/api, so the tests work from the repo root too.
+const api = join(import.meta.dir, "..");
 
 let env: any;
 let dispose: () => Promise<void>;
 
 beforeAll(async () => {
-  const proxy = await getPlatformProxy({ configPath: "wrangler.jsonc", persist: false });
+  const proxy = await getPlatformProxy({ configPath: join(api, "wrangler.jsonc"), persist: false });
   env = proxy.env;
   dispose = proxy.dispose;
-  const sql = await Bun.file("migrations/0001_waitlist.sql").text();
+  const sql = await Bun.file(join(api, "migrations/0001_waitlist.sql")).text();
   await env.DB.exec(sql.replace(/--.*$/gm, "").replace(/\s+/g, " "));
 });
 
 afterAll(async () => {
-  await dispose();
+  await dispose?.();
 });
 
 const call = (path: string, init?: RequestInit) =>
@@ -47,6 +51,7 @@ test("bad email and bad body are rejected", async () => {
 
 test("events only accept known names", async () => {
   expect((await post("/events", { name: "page_view" })).status).toBe(201);
+  expect((await post("/events", { name: "firm_matched" })).status).toBe(201);
   expect((await post("/events", { name: "hack" })).status).toBe(400);
 });
 

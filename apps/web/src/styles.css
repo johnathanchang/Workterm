@@ -1374,3 +1374,161 @@ select:focus-visible {
   clip: rect(0 0 0 0);
   white-space: nowrap;
 }
+
+/* Onboarding: "Finding your firms…" lines, the matched firm list and the plan picker. */
+.finding {
+  display: grid;
+  gap: 8px;
+  margin: 4px 0 0;
+  padding: 0;
+  list-style: none;
+  text-align: left;
+  color: var(--muted);
+}
+
+.finding li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  transition: color 0.2s;
+}
+
+.finding li.now,
+.finding li.done {
+  color: var(--ink);
+}
+
+.finding .tick {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border: 1.5px solid var(--line);
+  border-radius: 50%;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.finding li.done .tick {
+  border-color: #1f9d55;
+  background: #1f9d55;
+  color: #fff;
+}
+
+.matches {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.matches li {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fff;
+  animation: match-in 0.4s both;
+}
+
+.matches li:nth-child(2) { animation-delay: 0.08s; }
+.matches li:nth-child(3) { animation-delay: 0.16s; }
+.matches li:nth-child(4) { animation-delay: 0.24s; }
+.matches li:nth-child(5) { animation-delay: 0.32s; }
+.matches li:nth-child(6) { animation-delay: 0.4s; }
+
+.matches li > div {
+  display: grid;
+  gap: 2px;
+  justify-items: start;
+}
+
+.match-role {
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.match-why {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.matches .pill.gold {
+  margin-top: 4px;
+  padding: 2px 8px;
+  font-size: 0.72rem;
+}
+
+@keyframes match-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .matches li {
+    animation: none;
+  }
+}
+
+.plans {
+  display: grid;
+  gap: 10px;
+}
+
+.plan {
+  position: relative;
+  display: grid;
+  gap: 6px;
+  padding: 14px 16px;
+  border: 1.5px solid var(--line);
+  border-radius: 12px;
+  background: #fff;
+  font-weight: 400;
+  cursor: pointer;
+}
+
+.plan.on {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+
+.plan input {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: auto;
+  accent-color: var(--accent);
+}
+
+.plan-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 1.05rem;
+}
+
+.plan-price {
+  font-family: var(--display);
+  font-size: 1.6rem;
+  line-height: 1.1;
+}
+
+.plan-price small {
+  font-family: var(--body);
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.plan ul {
+  display: grid;
+  gap: 4px;
+  margin: 4px 0 0;
+  padding-left: 18px;
+  font-size: 0.9rem;
+}

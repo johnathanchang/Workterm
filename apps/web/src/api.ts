@@ -26,7 +26,18 @@ export async function joinWaitlist(input: {
 }
 
 // Fire and forget. A failed tracking call must never break the page.
-export function track(name: "page_view" | "waitlist_view" | "waitlist_signup_click", source?: string): void {
+export type EventName =
+  | "page_view"
+  | "waitlist_view"
+  | "waitlist_signup_click"
+  | "onboarding_started"
+  | "firm_matched"
+  | "account_view"
+  | "paywall_view"
+  | "trial_start_click"
+  | "onboarding_completed";
+
+export function track(name: EventName, source?: string): void {
   fetch(`${BASE}/events`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
