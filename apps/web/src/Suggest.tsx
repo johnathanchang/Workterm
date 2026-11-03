@@ -75,7 +75,8 @@ export default function Suggest({
           setOpen(true);
           setActive(-1);
         }}
-        onFocus={() => setOpen(true)}
+        // Opens on a click or on typing, not on focus, so the "fill out this field" bubble is not hidden by the list.
+        onClick={() => setOpen(true)}
         onBlur={() => setOpen(false)}
         onKeyDown={(e) => {
           if (e.key === "ArrowDown") {

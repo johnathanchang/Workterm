@@ -1566,3 +1566,61 @@ select:focus-visible {
 .suggest-list li.on {
   background: var(--accent-soft);
 }
+
+/* Sign-up: our own "Please fill out this field." bubble, shown under the first empty field. */
+.authcard {
+  position: relative;
+}
+
+.field-bubble {
+  position: absolute;
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 8px 16px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #fff;
+  box-shadow: 0 10px 24px -12px rgba(0, 0, 0, 0.35);
+  font-family: var(--body);
+  font-size: 1rem;
+  font-weight: 400;
+  color: var(--muted);
+  animation: bubble-in 0.15s ease-out;
+}
+
+/* Small arrow pointing up at the field. */
+.field-bubble::before {
+  content: "";
+  position: absolute;
+  top: -6px;
+  left: 22px;
+  width: 10px;
+  height: 10px;
+  border-top: 1px solid var(--line);
+  border-left: 1px solid var(--line);
+  background: #fff;
+  transform: rotate(45deg);
+}
+
+.field-bubble span {
+  font-size: 1.15rem;
+  font-weight: 800;
+  line-height: 1;
+  color: #990000;
+}
+
+@keyframes bubble-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .field-bubble {
+    animation: none;
+  }
+}

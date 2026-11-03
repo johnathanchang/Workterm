@@ -92,6 +92,7 @@ function upcomingTerms(): string[] {
 
 export default function Onboarding() {
   const [step, setStep] = useState<Step>("about");
+  const [name, setName] = useState("");
   const [school, setSchool] = useState("");
   const [program, setProgram] = useState("");
   const [level, setLevel] = useState("");
@@ -125,9 +126,41 @@ export default function Onboarding() {
     return () => timers.forEach(clearTimeout);
   }, [step]);
 
+  // Our own "Please fill out this field." bubble instead of the browser's, so it matches the site.
+  const cardRef = useRef<HTMLDivElement>(null);
+  const [bubble, setBubble] = useState<{ top: number; left: number } | null>(null);
+  useEffect(() => {
+    const card = cardRef.current;
+    if (!card) return;
+    let shown = false;
+    // The browser sends "invalid" once per empty field on submit. Show the bubble on the first one only.
+    const onInvalid = (e: Event) => {
+      e.preventDefault();
+      if (shown) return;
+      shown = true;
+      requestAnimationFrame(() => (shown = false));
+      const field = e.target as HTMLElement;
+      field.focus({ preventScroll: true });
+      field.scrollIntoView({ block: "center", behavior: "smooth" });
+      const box = field.getBoundingClientRect();
+      const base = card.getBoundingClientRect();
+      setBubble({ top: box.bottom - base.top + 8, left: box.left - base.left + 16 });
+    };
+    const hide = () => setBubble(null);
+    card.addEventListener("invalid", onInvalid, true);
+    card.addEventListener("input", hide);
+    card.addEventListener("change", hide);
+    return () => {
+      card.removeEventListener("invalid", onInvalid, true);
+      card.removeEventListener("input", hide);
+      card.removeEventListener("change", hide);
+    };
+  }, []);
+
   // Each new screen starts at the top of the page.
   useEffect(() => {
     window.scrollTo(0, 0);
+    setBubble(null);
   }, [step]);
 
   const toggle = (j: string) => setJobs((cur) => (cur.includes(j) ? cur.filter((x) => x !== j) : [...cur, j]));
@@ -144,7 +177,12 @@ export default function Onboarding() {
 
   return (
     <main className="authpage">
-      <div className="card authcard wide">
+      <div className="card authcard wide" ref={cardRef}>
+        {bubble && (
+          <p className="field-bubble" role="alert" style={{ top: bubble.top, left: bubble.left }}>
+            <span aria-hidden="true">!</span> Please fill out this field.
+          </p>
+        )}
         {idx >= 0 && (
           <ol className="progress" aria-label="Sign up progress">
             {STEPS.map((s, i) => (
@@ -164,6 +202,17 @@ export default function Onboarding() {
             }}
           >
             <h1 className="authtitle">Tell us about you</h1>
+            <label>
+              Name
+              <input
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Your full name"
+                autoComplete="name"
+                maxLength={100}
+                required
+              />
+            </label>
             <Suggest label="School" options={SCHOOLS} value={school} onChange={setSchool} placeholder="Start typing your school" />
             <Suggest label="Program" options={PROGRAMS} value={program} onChange={setProgram} placeholder="Start typing your program" />
             <div className="row">
@@ -366,6 +415,9 @@ export default function Onboarding() {
           <div className="stack">
             <h1 className="authtitle">You are all set.</h1>
             <ul className="summary">
+              <li>
+                <span>Name</span> {name}
+              </li>
               <li>
                 <span>School</span> {school}, {program}, {level}
               </li>
