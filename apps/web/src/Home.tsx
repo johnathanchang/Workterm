@@ -1,8 +1,11 @@
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { joinWaitlist, track } from "./api";
 import { Compare, CreateProfile, HowItWorks } from "./HowItWorks";
+import { PROGRAMS, SCHOOLS } from "./lists";
+import { savePrefill } from "./prefill";
+import Suggest from "./Suggest";
 
-type Status = "idle" | "sending" | "joined" | "already" | "invalid_email" | "missing" | "error";
+type Status = "idle" | "sending" | "invalid_email" | "missing";
 
 // ?src=tiktok in the link tells us which post brought the visitor.
 const source = new URLSearchParams(window.location.search).get("src")?.slice(0, 50) || undefined;
@@ -113,17 +116,13 @@ export default function Home() {
     if (!school.trim() || !program.trim()) return setStatus("missing");
     setStatus("sending");
     track("waitlist_signup_click", source);
-    setStatus(
-      await joinWaitlist({
-        email,
-        school: school.trim(),
-        program: program.trim(),
-        source,
-      }),
-    );
+    // Still join the waitlist, so we can email them about launch. If our server is down, they go on to sign up anyway.
+    const result = await joinWaitlist({ email, school: school.trim(), program: program.trim(), source });
+    if (result === "invalid_email") return setStatus("invalid_email");
+    // Carry their answers into sign-up, so they don't type them twice.
+    savePrefill({ school: school.trim(), program: program.trim() });
+    window.location.hash = "#/signup";
   }
-
-  const done = status === "joined" || status === "already";
 
   return (
     <>
@@ -173,59 +172,32 @@ export default function Home() {
 
         <section className="signup" id="early-access">
           <h2 className="join">Your internship awaits.</h2>
-          {done ? (
-            <div className="card success" role="status">
-              <h2>{status === "joined" ? "You're on the list." : "You're already on the list."}</h2>
-              <p>We'll email you once when Workterm opens. No spam, and you can unsubscribe anytime.</p>
+          <form className="card" onSubmit={onSubmit} noValidate>
+            <label>
+              Email
+              <input
+                type="email"
+                inputMode="email"
+                autoComplete="email"
+                placeholder="you@school.edu"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
+            </label>
+            <div className="row">
+              <Suggest label="School" options={SCHOOLS} value={school} onChange={setSchool} placeholder="Start typing your school" />
+              <Suggest label="Program" options={PROGRAMS} value={program} onChange={setProgram} placeholder="Start typing your program" />
             </div>
-          ) : (
-            <form className="card" onSubmit={onSubmit} noValidate>
-              <label>
-                Email
-                <input
-                  type="email"
-                  inputMode="email"
-                  autoComplete="email"
-                  placeholder="you@school.edu"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                />
-              </label>
-              <div className="row">
-                <label>
-                  <span>School</span>
-                  <input
-                    type="text"
-                    autoComplete="organization"
-                    placeholder="Your school"
-                    value={school}
-                    onChange={(e) => setSchool(e.target.value)}
-                    maxLength={100}
-                  />
-                </label>
-                <label>
-                  <span>Program</span>
-                  <input
-                    type="text"
-                    placeholder="Your program"
-                    value={program}
-                    onChange={(e) => setProgram(e.target.value)}
-                    maxLength={100}
-                  />
-                </label>
-              </div>
-              <button type="submit" className="cta" disabled={status === "sending"}>
-                {status === "sending" ? "Starting…" : "Start now"}
-              </button>
-              {status === "missing" && <p className="error">Please fill in your school and program.</p>}
-              {status === "invalid_email" && <p className="error">That email doesn't look right. Check it and try again.</p>}
-              {status === "error" && <p className="error">Something went wrong on our side. Please try again.</p>}
-              <p className="fine">
-                By joining, you agree that Workterm may email you about updates, changes, and pricing. Unsubscribe anytime.
-              </p>
-            </form>
-          )}
+            <button type="submit" className="cta" disabled={status === "sending"}>
+              {status === "sending" ? "Starting…" : "Start now"}
+            </button>
+            {status === "missing" && <p className="error">Please fill in your school and program.</p>}
+            {status === "invalid_email" && <p className="error">That email doesn't look right. Check it and try again.</p>}
+            <p className="fine">
+              By joining, you agree that Workterm may email you about updates, changes, and pricing. Unsubscribe anytime.
+            </p>
+          </form>
         </section>
 
         <section className="faq band" id="faq" aria-label="Questions and answers">

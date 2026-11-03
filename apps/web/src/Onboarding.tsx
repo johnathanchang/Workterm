@@ -2,6 +2,7 @@ import { FormEvent, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { type EventName, track } from "./api";
 import AuthButtons from "./AuthButtons";
+import { clearPrefill, readPrefill } from "./prefill";
 import { ALL_ROLES, PROGRAMS, ROLES, SCHOOLS, suggestedRoles } from "./lists";
 import Suggest from "./Suggest";
 
@@ -82,9 +83,13 @@ function upcomingTerms(): string[] {
 
 export default function Onboarding() {
   const [step, setStep] = useState<Step>("about");
+  // School and program arrive filled in when the student came from the home page form.
+  // Read in the first render, cleared after. StrictMode runs the first render twice in dev, so clearing must wait.
+  const [prefill] = useState(readPrefill);
+  useEffect(clearPrefill, []);
   const [name, setName] = useState("");
-  const [school, setSchool] = useState("");
-  const [program, setProgram] = useState("");
+  const [school, setSchool] = useState(prefill.school ?? "");
+  const [program, setProgram] = useState(prefill.program ?? "");
   const [level, setLevel] = useState("");
   const [term, setTerm] = useState("");
   const [jobs, setJobs] = useState<string[]>([]);

@@ -7,17 +7,19 @@ const plain = (s: string) =>
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase();
 
-// Names that start with what was typed come first, then names with a word that starts with it ("wat" finds
+// Names that start with what was typed come first, then names whose words start with each typed word ("wat" finds
 // "University of Waterloo"). Each group keeps the A to Z order of the list.
 function filter(options: string[], typed: string): string[] {
   const q = plain(typed.trim());
   if (!q) return options;
+  // "comp e" finds "Computer Engineering": every typed word starts some word in the name.
+  const typedWords = q.split(/\s+/);
   const starts: string[] = [];
   const words: string[] = [];
   for (const o of options) {
     const name = plain(o);
     if (name.startsWith(q)) starts.push(o);
-    else if (name.split(/[\s(/–-]+/).some((w) => w.startsWith(q))) words.push(o);
+    else if (typedWords.every((t) => name.split(/[\s(/–-]+/).some((w) => w.startsWith(t)))) words.push(o);
   }
   return [...starts, ...words];
 }
