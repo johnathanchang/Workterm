@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useRef, useState } from "react";
+import { FormEvent, type ReactNode, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { type EventName, track } from "./api";
 import AuthButtons from "./AuthButtons";
@@ -6,28 +6,65 @@ import { clearPrefill, readPrefill } from "./prefill";
 import { ALL_ROLES, PROGRAMS, ROLES, SCHOOLS, suggestedRoles } from "./lists";
 import Suggest from "./Suggest";
 
-// Rule 10: questions, then "Finding your firms…", then the matched firms (the aha moment), then account, then the paywall.
-type Step = "about" | "goals" | "resume" | "analyzing" | "matches" | "account" | "plans" | "done";
+// Rule 10, shaped by docs/references/onboarding-teardown.md:
+// promise, demo, questions that make the pain specific, "Building your plan…", matches plus a plan (the aha moment),
+// account, then the paywall. Every screen either learns something about the student or teaches them about the problem.
+type Step =
+  | "promise"
+  | "demo"
+  | "intent"
+  | "applied"
+  | "replies"
+  | "truth"
+  | "source"
+  | "name"
+  | "school"
+  | "year"
+  | "roles"
+  | "where"
+  | "resume"
+  | "building"
+  | "matches"
+  | "account"
+  | "plans"
+  | "done";
 
-// The progress bar covers the questions only.
-const STEPS: { key: Step; label: string }[] = [
-  { key: "about", label: "About you" },
-  { key: "goals", label: "Your roles" },
-  { key: "resume", label: "Resume" },
-];
+// The screens the progress bar and "~2 min left" cover, in order.
+const FLOW: Step[] = ["intent", "applied", "replies", "truth", "source", "name", "school", "year", "roles", "where", "resume"];
+const SECONDS_PER_SCREEN = 12;
 
-// The funnel event sent when each screen first shows.
+// The funnel event sent when each screen first shows. Every other screen sends onboarding_step, so drop-off shows per screen.
 const STEP_EVENTS: Partial<Record<Step, EventName>> = {
-  about: "onboarding_started",
+  promise: "onboarding_started",
   matches: "firm_matched",
   account: "account_view",
   plans: "paywall_view",
   done: "onboarding_completed",
 };
 
-// Lines that tick off one by one on the "Finding your firms…" screen.
-const FINDING = ["Reading your goals", "Checking your resume", "Searching firms near you", "Ranking your best fits"];
-const FINDING_MS = 700;
+const INTENTS = [
+  { key: "starting", icon: "🧭", label: "I haven't really started looking yet" },
+  { key: "no_replies", icon: "📭", label: "I've applied a lot and heard almost nothing" },
+  { key: "short_time", icon: "⏳", label: "My term is coming up and I still have nothing" },
+];
+const APPLIED = ["None yet", "1 to 20", "21 to 50", "51 to 100", "More than 100"];
+const REPLIES = ["None", "1 or 2", "3 to 5", "More than 5"];
+const SOURCES = ["TikTok", "Instagram", "YouTube", "Google search", "Friend or classmate", "Co-op office or professor", "Reddit", "Other"];
+const LEVELS = ["1st year", "2nd year", "3rd year", "4th year", "5th year or later", "Graduate student"];
+const WHERE = [
+  { key: "near", label: "Near me", sub: "Firms I can get to in person" },
+  { key: "remote", label: "Remote", sub: "Where the firm is doesn't matter" },
+  { key: "either", label: "Either", sub: "Near me first, remote works too" },
+];
+
+// Lines that tick off on the "Building your co-op plan…" screen.
+const BUILDING = ["Reading your goals", "Checking your resume", "Searching firms near you", "Ranking your best fits", "Planning your weeks"];
+const BUILDING_MS = 650;
+
+// Fewer roles make sharper tailored resumes.
+const MAX_ROLES = 3;
+// Paid is one price per co-op term (decision 0002). The exact number is still open; the brief says about $30 to $40.
+const TERM_PRICE = 35;
 
 // "Software, Data and Design"
 const listOf = (items: string[]) => (items.length < 2 ? items.join("") : `${items.slice(0, -1).join(", ")} and ${items[items.length - 1]}`);
@@ -35,8 +72,8 @@ const listOf = (items: string[]) => (items.length < 2 ? items.join("") : `${item
 type Match = { firm: string; role: string; fit: number; why: string; hidden: boolean };
 
 // Up to six example matches, spread across the job areas the student picked.
-function exampleMatches(jobs: string[], where: string, program: string): Match[] {
-  const place = where.split(",")[0].trim();
+function exampleMatches(jobs: string[], city: string, program: string): Match[] {
+  const place = city.split(",")[0].trim();
   const out: Match[] = [];
   for (let round = 0; round < 3 && out.length < 6; round++) {
     for (const job of jobs) {
@@ -47,7 +84,7 @@ function exampleMatches(jobs: string[], where: string, program: string): Match[]
       const n = out.length;
       const why = [
         `Fits your ${job} goal${program ? ` and your ${program} program` : ""}.`,
-        place ? `${place === "Remote" ? "Works remotely" : `Close to ${place}`}, and a fit for your ${job} goal.` : `A fit for your ${job} goal.`,
+        place ? `Close to ${place}, and a fit for your ${job} goal.` : `A fit for your ${job} goal.`,
         `Small team that hires students without posting jobs.`,
       ][n % 3];
       out.push({ firm, role: `${job} co-op`, fit: 94 - n * 4, why, hidden: n % 3 === 2 });
@@ -56,12 +93,9 @@ function exampleMatches(jobs: string[], where: string, program: string): Match[]
   return out;
 }
 
-// Fewer roles make sharper tailored resumes.
-const MAX_ROLES = 3;
-const LEVELS = ["1st year", "2nd year", "3rd year", "4th year", "5th year or later", "Graduate student"];
-
 // Co-op terms from the one after today's through Winter 2030. Terms are 4 months: Jan-Apr, May-Aug, Sep-Dec.
 const LAST_TERM = "Winter 2030";
+const TERM_MONTH: Record<string, number> = { Winter: 0, Summer: 4, Fall: 8 };
 
 function upcomingTerms(): string[] {
   const names = ["Winter", "Summer", "Fall"];
@@ -81,47 +115,74 @@ function upcomingTerms(): string[] {
   return out;
 }
 
+// Whole weeks from today until the first day of the term, like "Summer 2027".
+function weeksUntil(term: string): number {
+  const [name, year] = term.split(" ");
+  const start = new Date(Number(year), TERM_MONTH[name] ?? 0, 1);
+  return Math.max(0, Math.round((start.getTime() - Date.now()) / (7 * 24 * 3600 * 1000)));
+}
+
+// The "That's the job board, not you" screen uses the student's own answers.
+function truthHeading(applied: string, replies: string): string {
+  if (applied === "None yet" || !applied) return "Start where most students never look.";
+  if (replies === "None") return `${applied} applications. No replies. That's the job board, not you.`;
+  if (replies === "1 or 2") return `${applied} applications. ${replies} replies. That's the job board, not you.`;
+  return "You're getting replies. Let's get you more of them.";
+}
+
 export default function Onboarding() {
-  const [step, setStep] = useState<Step>("about");
+  const [step, setStep] = useState<Step>("promise");
   // School and program arrive filled in when the student came from the home page form.
   // Read in the first render, cleared after. StrictMode runs the first render twice in dev, so clearing must wait.
   const [prefill] = useState(readPrefill);
   useEffect(clearPrefill, []);
+  const [intent, setIntent] = useState("");
+  const [applied, setApplied] = useState("");
+  const [replies, setReplies] = useState("");
+  const [source, setSource] = useState("");
   const [name, setName] = useState(prefill.name ?? "");
   const [school, setSchool] = useState(prefill.school ?? "");
   const [program, setProgram] = useState(prefill.program ?? "");
   const [level, setLevel] = useState("");
   const [term, setTerm] = useState("");
+  const [moreTerms, setMoreTerms] = useState(false);
   const [jobs, setJobs] = useState<string[]>([]);
   const [custom, setCustom] = useState("");
   const [adding, setAdding] = useState(false);
   const [moreRoles, setMoreRoles] = useState(false);
   const [where, setWhere] = useState("");
+  const [city, setCity] = useState("");
   const [file, setFile] = useState<File | null>(null);
+  const [nudge, setNudge] = useState(false);
   // "Edit" on the summary sends the student to one screen, then straight back to the summary.
   const [returnTo, setReturnTo] = useState<Step | null>(null);
-  const [found, setFound] = useState(0);
-  const [plan, setPlan] = useState<"free" | "pro">("pro");
+  const [built, setBuilt] = useState(0);
+  const [plan, setPlan] = useState<"free" | "term">("term");
   const terms = upcomingTerms();
-  const matches = exampleMatches(jobs, where, program);
+  const matches = exampleMatches(jobs, where === "remote" ? "" : city, program);
+  const firstName = name.trim().split(/\s+/)[0] ?? "";
+  // No applications yet means there are no replies to ask about.
+  const flow = applied === "None yet" ? FLOW.filter((s) => s !== "replies") : FLOW;
 
   // One event per step reached. StrictMode runs effects twice in dev, so the ref keeps each to one.
   const seen = useRef(new Set<Step>());
   useEffect(() => {
     if (seen.current.has(step)) return;
     seen.current.add(step);
-    const event = STEP_EVENTS[step];
-    if (event) track(event);
+    track(STEP_EVENTS[step] ?? "onboarding_step", STEP_EVENTS[step] ? undefined : step);
   }, [step]);
 
-  // Tick the "Finding your firms…" lines, then show the matches.
+  // An answer worth knowing for go-to-market, like "source:TikTok". The API keeps up to 50 characters.
+  const answer = (key: string, value: string) => track("onboarding_answer", `${key}:${value}`.slice(0, 50));
+
+  // Tick the "Building your co-op plan…" lines, then show the matches.
   useEffect(() => {
-    if (step !== "analyzing") return;
-    setFound(0);
+    if (step !== "building") return;
+    setBuilt(0);
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const tick = reduce ? 300 : FINDING_MS;
-    const timers = FINDING.map((_, i) => setTimeout(() => setFound(i + 1), tick * (i + 1)));
-    timers.push(setTimeout(() => setStep("matches"), tick * (FINDING.length + 1)));
+    const tick = reduce ? 250 : BUILDING_MS;
+    const timers = BUILDING.map((_, i) => setTimeout(() => setBuilt(i + 1), tick * (i + 1)));
+    timers.push(setTimeout(() => setStep("matches"), tick * (BUILDING.length + 1)));
     return () => timers.forEach(clearTimeout);
   }, [step]);
 
@@ -157,7 +218,7 @@ export default function Onboarding() {
   }, []);
 
   // Each screen is a browser history entry, so the header arrows and the browser's own back and forward step through
-  // sign-up. "Finding your firms…" replaces itself with the matches, so going back from the matches lands on the resume.
+  // sign-up. "Building your plan…" replaces itself with the matches, so going back from the matches lands on the resume.
   const fromHistory = useRef(false);
   const lastStep = useRef<Step | null>(null);
   useEffect(() => {
@@ -170,15 +231,16 @@ export default function Onboarding() {
       return;
     }
     const entry = { step };
-    if (prev === null || (prev === "analyzing" && step === "matches")) history.replaceState(entry, "");
+    if (prev === null || (prev === "building" && step === "matches")) history.replaceState(entry, "");
     else history.pushState(entry, "");
   }, [step]);
   useEffect(() => {
     const onPop = (e: PopStateEvent) => {
       const to = (e.state as { step?: Step } | null)?.step;
-      if (!to || to === "analyzing") return;
+      if (!to || to === "building") return;
       fromHistory.current = true;
       setReturnTo(null);
+      setNudge(false);
       setStep(to);
     };
     window.addEventListener("popstate", onPop);
@@ -209,39 +271,65 @@ export default function Onboarding() {
   const otherRoles = ALL_ROLES.filter((r) => !suggested.includes(r));
   const roleChips = [...suggested, ...ownRoles, ...otherRoles.filter((r) => moreRoles || jobs.includes(r))];
 
-  const idx = STEPS.findIndex((s) => s.key === step);
+  // The screen after this one in the question flow.
+  const after = (s: Step): Step => {
+    const i = flow.indexOf(s);
+    return i >= 0 && i < flow.length - 1 ? flow[i + 1] : "building";
+  };
   const go = (to: Step) => {
     setStep(returnTo ?? to);
     setReturnTo(null);
+  };
+  const next = (from: Step) => go(after(from));
+  // One-tap answers move on by themselves, after a beat so the student sees their pick light up.
+  const pickThen = (set: () => void, from: Step) => {
+    set();
+    window.setTimeout(() => next(from), 220);
   };
   const edit = (to: Step) => {
     setReturnTo("done");
     setStep(to);
   };
-  const back = idx > 0 ? () => history.back() : () => (window.location.hash = "#/");
+  const back = () => history.back();
 
-  // Header arrows. First screen: next only. Summary: back only. "Finding your firms…": none.
+  // The thin bar and "~2 min left" on question screens.
+  const pos = flow.indexOf(step);
+  const left = pos >= 0 ? (flow.length - pos) * SECONDS_PER_SCREEN : 0;
+  const timeLeft = left > 90 ? "~2 min left" : left > 40 ? "~1 min left" : "Almost done";
+
+  // Header arrows. Promise: next only. Summary: back only. "Building your plan…": none.
   // Next does what the screen's main button does, so the "fill out this field" bubble still shows.
   const [arrowSlot, setArrowSlot] = useState<HTMLElement | null>(null);
   useEffect(() => setArrowSlot(document.getElementById("header-arrows")), []);
-  const showBack = step !== "about" && step !== "analyzing";
-  const showNext = step !== "done" && step !== "analyzing";
-  // → is faded until the screen is done. The resume is optional, and signing up must be done with a sign-up button.
+  const showBack = step !== "promise" && step !== "building";
+  const showNext = step !== "done" && step !== "building";
+  // → is faded until the screen is answered. The resume is optional, and signing up must be done with a sign-up button.
   const stepDone: Partial<Record<Step, boolean>> = {
-    about: [name, school, program, level, term].every((v) => v.trim() !== ""),
-    goals: jobs.length > 0,
+    intent: intent !== "",
+    applied: applied !== "",
+    replies: replies !== "",
+    source: source !== "",
+    name: name.trim() !== "",
+    school: school.trim() !== "" && program.trim() !== "",
+    year: level !== "" && term !== "",
+    roles: jobs.length > 0,
+    where: where !== "" && (where === "remote" || city.trim() !== ""),
     account: false,
   };
   const nextDisabled = stepDone[step] === false;
-  function next() {
+  function arrowNext() {
     if (nextDisabled) return;
-    if (step === "matches") setStep("account");
-    else cardRef.current?.querySelector("form")?.requestSubmit();
+    const form = cardRef.current?.querySelector("form");
+    if (form) form.requestSubmit();
+    else if (step === "promise") setStep("demo");
+    else if (step === "demo") setStep("intent");
+    else if (step === "matches") setStep("account");
+    else next(step);
   }
   const arrows = (
     <>
       {showBack && (
-        <button type="button" className="arrow" aria-label="Back" onClick={() => history.back()}>
+        <button type="button" className="arrow" aria-label="Back" onClick={back}>
           ←
         </button>
       )}
@@ -252,13 +340,19 @@ export default function Onboarding() {
           aria-label="Next"
           title={nextDisabled ? (step === "account" ? "Sign up to continue" : "Finish this step first") : "Next"}
           disabled={nextDisabled}
-          onClick={next}
+          onClick={arrowNext}
         >
           →
         </button>
       )}
     </>
   );
+
+  // A plain form that moves to the next screen when sent. Used by screens with fields, so Enter works.
+  const formNext = (from: Step) => (e: FormEvent) => {
+    e.preventDefault();
+    if (stepDone[from] !== false) next(from);
+  };
 
   return (
     <main className="authpage">
@@ -269,33 +363,165 @@ export default function Onboarding() {
             <span aria-hidden="true">!</span> Please fill out this field.
           </p>
         )}
-        {idx >= 0 && (
-          <ol className="progress" aria-label="Sign up progress">
-            {STEPS.map((s, i) => (
-              <li key={s.key} className={i < idx ? "done" : i === idx ? "now" : ""} aria-current={i === idx ? "step" : undefined}>
-                {i < idx ? (
-                  <button type="button" className="linkish plain" onClick={() => setStep(s.key)}>
-                    <span>{i + 1}</span> {s.label}
-                  </button>
-                ) : (
-                  <>
-                    <span>{i + 1}</span> {s.label}
-                  </>
-                )}
-              </li>
-            ))}
-          </ol>
+        {pos >= 0 && (
+          <div className="ob-top">
+            <div
+              className="ob-bar"
+              role="progressbar"
+              aria-label="Sign up progress"
+              aria-valuemin={0}
+              aria-valuemax={flow.length}
+              aria-valuenow={pos + 1}
+            >
+              <span style={{ width: `${((pos + 1) / (flow.length + 1)) * 100}%` }} />
+            </div>
+            <span className="ob-time">{timeLeft}</span>
+          </div>
         )}
 
-        {step === "about" && (
-          <form
-            className="stack"
-            onSubmit={(e) => {
-              e.preventDefault();
-              go("goals");
-            }}
-          >
-            <h1 className="authtitle">Tell us about you</h1>
+        {/* 1. The promise: one outcome in the student's words, one button. */}
+        {step === "promise" && (
+          <div className="stack ob-hero">
+            <p className="eyebrow-small">For co-op students</p>
+            <h1 className="authtitle big">Stop sending applications into the void.</h1>
+            <p className="lead small">
+              Workterm finds firms that fit you, including ones that never post a job, and writes a resume and email for
+              each one. You approve every email.
+            </p>
+            <button type="button" className="ob-cta" onClick={() => setStep("demo")}>
+              Find my firms <span aria-hidden="true">→</span>
+            </button>
+            <p className="fine center">Takes about 2 minutes. Free to see your matches.</p>
+            <p className="fine center">
+              Already have an account? <a href="#/login">Log in</a>
+            </p>
+          </div>
+        )}
+
+        {/* 2. The demo: the magic moment in about 10 seconds. */}
+        {step === "demo" && (
+          <div className="stack">
+            <h1 className="authtitle">One resume in. A firm that fits you out.</h1>
+            <div className="demo" aria-hidden="true">
+              <div className="demo-card demo-resume">
+                <strong>Your resume</strong>
+                <span className="demo-line" />
+                <span className="demo-line short" />
+                <span className="demo-tags">
+                  <em>Python</em> <em>CAD</em> <em>Robotics club</em>
+                </span>
+              </div>
+              <div className="demo-arrow">↓</div>
+              <div className="demo-card demo-match">
+                <span>
+                  <strong>Small robotics firm, Waterloo</strong>
+                  <small>Hires co-ops without posting</small>
+                </span>
+                <span className="pill green">92% fit</span>
+              </div>
+              <div className="demo-card demo-email">
+                <small>Draft email · waiting for your approval</small>
+                <span>
+                  Hi Priya, I saw your team's warehouse robot demo. In my robotics club I built the arm controller in
+                  Python…
+                </span>
+              </div>
+            </div>
+            <p className="lead small">
+              Every match comes with a tailored resume and a short email about their work, not a template.
+            </p>
+            <div className="nav">
+              <button type="button" onClick={() => setStep("intent")}>
+                Show me mine
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* 3. Questions. Each one personalizes the plan or makes the pain specific. */}
+        {step === "intent" && (
+          <Question title="Which of these sounds most like you?" why="No wrong answers. It shapes your plan.">
+            <Options
+              items={INTENTS.map((i) => ({ key: i.key, label: i.label, icon: i.icon }))}
+              value={intent}
+              onPick={(k) => pickThen(() => {
+                setIntent(k);
+                answer("intent", k);
+              }, "intent")}
+            />
+          </Question>
+        )}
+
+        {step === "applied" && (
+          <Question title="How many co-op applications have you sent so far?" why="This term or your last search. A guess is fine.">
+            <Options
+              items={APPLIED.map((a) => ({ key: a, label: a }))}
+              value={applied}
+              onPick={(k) => pickThen(() => {
+                setApplied(k);
+                answer("applied", k);
+              }, "applied")}
+            />
+          </Question>
+        )}
+
+        {step === "replies" && (
+          <Question title="And how many got a reply or an interview?" why={`Out of your ${applied.toLowerCase()} applications.`}>
+            <Options
+              items={REPLIES.map((r) => ({ key: r, label: r }))}
+              value={replies}
+              onPick={(k) => pickThen(() => {
+                setReplies(k);
+                answer("replies", k);
+              }, "replies")}
+            />
+          </Question>
+        )}
+
+        {/* Teaches the student about their problem, using their own numbers. */}
+        {step === "truth" && (
+          <div className="stack">
+            <h1 className="authtitle">{truthHeading(applied, replies)}</h1>
+            <div className="compare">
+              <div>
+                <p className="eyebrow-small">The job board</p>
+                <ul>
+                  <li>The same posted jobs every student sees</li>
+                  <li>A flood of applicants for each one</li>
+                  <li>One resume sent everywhere</li>
+                </ul>
+              </div>
+              <div className="on">
+                <p className="eyebrow-small">With Workterm</p>
+                <ul>
+                  <li>Firms that fit you, posted or not</li>
+                  <li>A short email about their work</li>
+                  <li>A resume tailored to each one</li>
+                </ul>
+              </div>
+            </div>
+            <p className="lead small">Many small firms hire co-op students without ever posting a job. Most students never find them.</p>
+            <Nav back={back} next="Find my firms" onNext={() => next("truth")} />
+          </div>
+        )}
+
+        {step === "source" && (
+          <Question title="How did you hear about Workterm?" why="It helps us reach more students like you.">
+            <Options
+              grid
+              items={SOURCES.map((s) => ({ key: s, label: s }))}
+              value={source}
+              onPick={(k) => pickThen(() => {
+                setSource(k);
+                answer("source", k);
+              }, "source")}
+            />
+          </Question>
+        )}
+
+        {step === "name" && (
+          <form className="stack" onSubmit={formNext("name")}>
+            <Head title="What should we call you?" why="Your name goes at the bottom of every email." />
             <label>
               Name
               <input
@@ -304,45 +530,61 @@ export default function Onboarding() {
                 placeholder="Your full name"
                 autoComplete="name"
                 maxLength={100}
+                autoFocus
                 required
               />
             </label>
-            <Suggest label="School" options={SCHOOLS} value={school} onChange={setSchool} placeholder="Start typing your school" />
-            <Suggest label="Program" options={PROGRAMS} value={program} onChange={setProgram} placeholder="Start typing your program" />
-            <div className="row">
-              <label>
-                Year of study
-                <select value={level} onChange={(e) => setLevel(e.target.value)} required>
-                  <option value="">Choose</option>
-                  {LEVELS.map((l) => (
-                    <option key={l}>{l}</option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                Next co-op term
-                <select value={term} onChange={(e) => setTerm(e.target.value)} required>
-                  <option value="">Choose</option>
-                  {terms.map((t) => (
-                    <option key={t}>{t}</option>
-                  ))}
-                </select>
-              </label>
-            </div>
-            <Nav back={back} backLabel={idx === 0 ? "Home" : undefined} />
+            <Nav back={back} disabled={!stepDone.name} />
           </form>
         )}
 
-        {step === "goals" && (
-          <form
-            className="stack"
-            onSubmit={(e) => {
-              e.preventDefault();
-              if (jobs.length > 0) go("resume");
-            }}
-          >
-            <h1 className="authtitle">What roles are you aiming for?</h1>
-            <p className="lead small">Pick up to 3. We'll tailor your resume to them. You can change this later.</p>
+        {step === "school" && (
+          <form className="stack" onSubmit={formNext("school")}>
+            <Head
+              title={firstName ? `Where do you study, ${firstName}?` : "Where do you study?"}
+              why="It goes in every email and shapes which firms we suggest."
+            />
+            <Suggest label="School" options={SCHOOLS} value={school} onChange={setSchool} placeholder="Start typing your school" />
+            <Suggest label="Program" options={PROGRAMS} value={program} onChange={setProgram} placeholder="Start typing your program" />
+            <Nav back={back} />
+          </form>
+        )}
+
+        {step === "year" && (
+          <form className="stack" onSubmit={formNext("year")}>
+            <Head title="When is your next co-op?" why="We plan your weeks back from the day your term starts." />
+            <fieldset className="ob-field">
+              <legend>Next co-op term</legend>
+              <div className="tiles">
+                {(moreTerms ? terms : terms.slice(0, 6)).map((t) => (
+                  <button type="button" key={t} className={term === t ? "tile on" : "tile"} aria-pressed={term === t} onClick={() => setTerm(t)}>
+                    {t}
+                  </button>
+                ))}
+              </div>
+              {!moreTerms && terms.length > 6 && (
+                <button type="button" className="linkish" onClick={() => setMoreTerms(true)}>
+                  Later term
+                </button>
+              )}
+            </fieldset>
+            <fieldset className="ob-field">
+              <legend>Year of study</legend>
+              <div className="tiles">
+                {LEVELS.map((l) => (
+                  <button type="button" key={l} className={level === l ? "tile on" : "tile"} aria-pressed={level === l} onClick={() => setLevel(l)}>
+                    {l}
+                  </button>
+                ))}
+              </div>
+            </fieldset>
+            <Nav back={back} disabled={!stepDone.year} />
+          </form>
+        )}
+
+        {step === "roles" && (
+          <form className="stack" onSubmit={formNext("roles")}>
+            <Head title="What roles are you aiming for?" why="Pick up to 3. We tailor your resume to them. You can change this later." />
             <div className="chips role-chips" role="group" aria-label="Roles">
               {roleChips.map((j) => {
                 const on = jobs.includes(j);
@@ -390,24 +632,53 @@ export default function Onboarding() {
                 {moreRoles ? "Show fewer roles" : "See more roles"}
               </button>
             </p>
-            <label>
-              Where <span className="opt">(city or remote, optional)</span>
-              <input value={where} onChange={(e) => setWhere(e.target.value)} placeholder="Toronto, Remote" maxLength={100} />
-            </label>
             <Nav back={back} disabled={jobs.length === 0} />
           </form>
         )}
 
+        {step === "where" && (
+          <form className="stack" onSubmit={formNext("where")}>
+            <Head title="Where do you want to work?" why="It decides which firms we search first." />
+            <Options
+              items={WHERE.map((w) => ({ key: w.key, label: w.label, sub: w.sub }))}
+              value={where}
+              onPick={(k) => (k === "remote" ? pickThen(() => setWhere(k), "where") : setWhere(k))}
+            />
+            {where && where !== "remote" && (
+              <label>
+                Your city
+                <input value={city} onChange={(e) => setCity(e.target.value)} placeholder="Like Waterloo" maxLength={100} autoFocus required />
+              </label>
+            )}
+            <Nav back={back} disabled={!stepDone.where} />
+          </form>
+        )}
+
+        {/* Teaches first (the resume does not need to be perfect), then asks. Skipping gets one soft nudge, never a block. */}
         {step === "resume" && (
           <form
             className="stack"
             onSubmit={(e) => {
               e.preventDefault();
-              go("analyzing");
+              if (file) go("building");
+              else setNudge(true);
             }}
           >
-            <h1 className="authtitle">Upload your resume</h1>
-            <p className="lead small">We rate it against your roles. In this preview, it stays in your browser.</p>
+            <Head
+              title="You don't need the perfect resume."
+              why="We tailor it to every firm. In this preview, your file stays in your browser."
+            />
+            <ul className="sent" aria-hidden="true">
+              <li>
+                <strong>To: Northbeam Robotics</strong> Your resume, tuned for robotics
+              </li>
+              <li>
+                <strong>To: Harbor Data Co.</strong> Your resume, tuned for data
+              </li>
+              <li>
+                <strong>To: Kite Studio</strong> Your resume, tuned for design
+              </li>
+            </ul>
             {/* Our own button and file name in one row. The browser's file box is hidden but still works with the keyboard. */}
             <label className={file ? "drop has-file" : "drop"}>
               <input
@@ -427,19 +698,49 @@ export default function Onboarding() {
                 )}
               </span>
             </label>
-            <Nav back={back} next={file ? "Find matching companies" : "Skip and find matching companies"} />
+            <Nav back={back} next={file ? "Build my plan" : "Do it later"} />
+            {nudge && (
+              <div className="sheet-backdrop" onClick={() => setNudge(false)}>
+                <div className="sheet" role="dialog" aria-modal="true" aria-labelledby="nudge-title" onClick={(e) => e.stopPropagation()}>
+                  <h2 id="nudge-title">Matches are sharper with a resume</h2>
+                  <p>We use it to pick firms that fit what you've done and to write each email about your real work.</p>
+                  <label className="btn sheet-add">
+                    <input
+                      type="file"
+                      className="visually-hidden"
+                      accept=".pdf,.doc,.docx,.txt"
+                      onChange={(e) => {
+                        setFile(e.target.files?.[0] ?? null);
+                        setNudge(false);
+                      }}
+                    />
+                    Add my resume
+                  </label>
+                  <button
+                    type="button"
+                    className="ghost"
+                    onClick={() => {
+                      setNudge(false);
+                      go("building");
+                    }}
+                  >
+                    Skip for now
+                  </button>
+                </div>
+              </div>
+            )}
           </form>
         )}
 
-        {step === "analyzing" && (
+        {step === "building" && (
           <div className="analyzing" role="status">
-            <div className="spinner" aria-hidden="true" />
-            <h1 className="authtitle">Finding your firms…</h1>
+            <p className="ob-pct">{Math.round((built / BUILDING.length) * 100)}%</p>
+            <h1 className="authtitle">Building your co-op plan…</h1>
             <ul className="finding">
-              {FINDING.map((f, i) => (
-                <li key={f} className={i < found ? "done" : i === found ? "now" : ""}>
+              {BUILDING.map((f, i) => (
+                <li key={f} className={i < built ? "done" : i === built ? "now" : ""}>
                   <span className="tick" aria-hidden="true">
-                    {i < found ? "✓" : ""}
+                    {i < built ? "✓" : ""}
                   </span>
                   {f}
                 </li>
@@ -448,9 +749,10 @@ export default function Onboarding() {
           </div>
         )}
 
+        {/* The aha moment: their firms, their timeline. Leaving now means leaving their own plan. */}
         {step === "matches" && (
           <div className="stack">
-            <p className="eyebrow-small">Your matches</p>
+            <p className="eyebrow-small">{firstName ? `${firstName}'s plan` : "Your plan"}</p>
             <h1 className="authtitle">We found {matches.length} firms that fit you.</h1>
             <p className="lead small">
               Ranked by fit for {listOf(jobs.slice(0, 3))}
@@ -469,24 +771,40 @@ export default function Onboarding() {
                 </li>
               ))}
             </ol>
+            {term && (
+              <div className="plan-box">
+                <p className="eyebrow-small">
+                  {weeksUntil(term)} weeks until {term}
+                </p>
+                <ol>
+                  <li>
+                    <strong>This week:</strong> approve your first emails to your top {Math.min(3, matches.length)} firms.
+                  </li>
+                  <li>
+                    <strong>Each week after:</strong> new firms and follow-ups, paced from your own Gmail.
+                  </li>
+                  <li>
+                    <strong>Every week:</strong> one skill or project tip from what your firms look for.
+                  </li>
+                </ol>
+              </div>
+            )}
             <p className="notice">Preview: these are examples. Real matches from your resume arrive when Workterm opens.</p>
-            <div className="nav">
-              <BackButton onClick={() => history.back()} />
-              <button type="button" onClick={() => setStep("account")}>
-                Save my matches
-              </button>
-            </div>
+            <Nav back={back} next="Save my plan" onNext={() => setStep("account")} />
           </div>
         )}
 
         {step === "account" && (
           <div className="stack">
-            <h1 className="authtitle">Save your matches</h1>
-            <p className="lead small">Sign up with your school account to keep your matches and start applying.</p>
+            <h1 className="authtitle">Save your plan</h1>
+            <p className="lead small">Sign up to keep your matches and your weekly plan.</p>
             <AuthButtons verb="Sign up" onPick={() => go("plans")} />
+            <p className="fine center">
+              Signing up does not give us access to your Gmail. Sending is a separate step, and you approve every email.
+            </p>
             <p className="notice">Preview: this does not create an account yet.</p>
             <div className="nav">
-              <BackButton onClick={() => history.back()} />
+              <BackButton onClick={back} />
             </div>
             <p className="fine center">
               Already have an account? <a href="#/login">Log in</a>
@@ -494,31 +812,34 @@ export default function Onboarding() {
           </div>
         )}
 
+        {/* The paywall: their goal restated, two options, the cost of leaving made concrete. */}
         {step === "plans" && (
           <form
             className="stack"
             onSubmit={(e) => {
               e.preventDefault();
-              if (plan === "pro") track("trial_start_click");
+              if (plan === "term") track("trial_start_click");
               go("done");
             }}
           >
-            <h1 className="authtitle">Choose your plan</h1>
-            <p className="lead small">Start free. Upgrade when you are ready to apply to more firms.</p>
+            <h1 className="authtitle">{term ? `Get your ${term} search moving` : "Get your co-op search moving"}</h1>
+            <p className="lead small">
+              Your {matches.length} firms are ready. Free covers 5 emails. A term pass covers the whole search.
+            </p>
             <div className="plans" role="radiogroup" aria-label="Plans">
-              <label className={plan === "pro" ? "plan on" : "plan"}>
-                <input type="radio" name="plan" checked={plan === "pro"} onChange={() => setPlan("pro")} />
+              <label className={plan === "term" ? "plan on" : "plan"}>
+                <input type="radio" name="plan" checked={plan === "term"} onChange={() => setPlan("term")} />
                 <span className="plan-head">
-                  <strong>Pro</strong>
-                  <span className="pill gold">Free trial</span>
+                  <strong>Term pass</strong>
+                  <span className="pill gold">Whole term</span>
                 </span>
                 <span className="plan-price">
-                  $20 <small>a month after your trial</small>
+                  ${TERM_PRICE} <small>once, for {term || "one co-op term"}</small>
                 </span>
                 <ul>
-                  <li>Everything in Free</li>
-                  <li>A tailored resume for every job</li>
-                  <li>Emails sent from your Gmail, after you approve</li>
+                  <li>All your matches, updated every week</li>
+                  <li>A tailored resume for every firm</li>
+                  <li>Emails from your Gmail, after you approve</li>
                   <li>Follow-ups and reply tracking</li>
                 </ul>
               </label>
@@ -537,38 +858,54 @@ export default function Onboarding() {
                 </ul>
               </label>
             </div>
-            <Nav back={() => history.back()} next={plan === "pro" ? "Start free trial" : "Continue with Free"} />
-            <p className="fine center">Cancel anytime. We remind you before your trial ends. We cannot promise a placement.</p>
+            <ol className="timeline">
+              <li>
+                <strong>Today</strong> See every match and send your first emails.
+              </li>
+              <li>
+                <strong>During your search</strong> We pace sends and follow-ups from your Gmail.
+              </li>
+              <li>
+                <strong>No subscription</strong> One payment for the term. Nothing renews.
+              </li>
+            </ol>
+            <Nav back={back} next={plan === "term" ? `Get my term pass for $${TERM_PRICE}` : "Continue with Free"} />
+            <p className="fine center">We cannot promise a placement. We help you reach more of the right firms.</p>
             <p className="notice">Preview: no payment is taken. Payments open when Workterm opens.</p>
           </form>
         )}
 
         {step === "done" && (
           <div className="stack">
-            <h1 className="authtitle">You are all set.</h1>
+            <h1 className="authtitle">You are all set{firstName ? `, ${firstName}` : ""}.</h1>
             <ul className="summary">
               <li>
                 <span>Name</span> {name}
-                <button type="button" className="linkish edit" onClick={() => edit("about")} aria-label="Edit name">
+                <button type="button" className="linkish edit" onClick={() => edit("name")} aria-label="Edit name">
                   Edit
                 </button>
               </li>
               <li>
-                <span>School</span> {school}, {program}, {level}
-                <button type="button" className="linkish edit" onClick={() => edit("about")} aria-label="Edit school">
+                <span>School</span> {school}, {program}
+                <button type="button" className="linkish edit" onClick={() => edit("school")} aria-label="Edit school">
                   Edit
                 </button>
               </li>
               <li>
-                <span>Next term</span> {term}
-                <button type="button" className="linkish edit" onClick={() => edit("about")} aria-label="Edit next term">
+                <span>Next term</span> {term}, {level}
+                <button type="button" className="linkish edit" onClick={() => edit("year")} aria-label="Edit next term">
                   Edit
                 </button>
               </li>
               <li>
                 <span>Roles</span> {jobs.join(", ")}
-                {where ? ` · ${where}` : ""}
-                <button type="button" className="linkish edit" onClick={() => edit("goals")} aria-label="Edit roles">
+                <button type="button" className="linkish edit" onClick={() => edit("roles")} aria-label="Edit roles">
+                  Edit
+                </button>
+              </li>
+              <li>
+                <span>Where</span> {where === "remote" ? "Remote" : `${city}${where === "either" ? " or remote" : ""}`}
+                <button type="button" className="linkish edit" onClick={() => edit("where")} aria-label="Edit where">
                   Edit
                 </button>
               </li>
@@ -579,7 +916,7 @@ export default function Onboarding() {
                 </button>
               </li>
               <li>
-                <span>Plan</span> {plan === "pro" ? "Pro, free trial" : "Free"}
+                <span>Plan</span> {plan === "term" ? `Term pass, $${TERM_PRICE}` : "Free"}
                 <button type="button" className="linkish edit" onClick={() => edit("plans")} aria-label="Edit plan">
                   Edit
                 </button>
@@ -604,6 +941,58 @@ const Check = () => (
   </svg>
 );
 
+function Head({ title, why }: { title: string; why: string }) {
+  return (
+    <div className="ob-head">
+      <h1 className="authtitle">{title}</h1>
+      <p className="lead small">{why}</p>
+    </div>
+  );
+}
+
+// A one-tap question screen. Its buttons move on by themselves, so it has Back only.
+function Question({ title, why, children }: { title: string; why: string; children: ReactNode }) {
+  return (
+    <div className="stack">
+      <Head title={title} why={why} />
+      {children}
+      <div className="nav">
+        <BackButton onClick={() => history.back()} />
+      </div>
+    </div>
+  );
+}
+
+type Option = { key: string; label: string; sub?: string; icon?: string };
+
+function Options({ items, value, onPick, grid }: { items: Option[]; value: string; onPick: (key: string) => void; grid?: boolean }) {
+  return (
+    <div className={grid ? "options grid" : "options"} role="radiogroup">
+      {items.map((o) => (
+        <button
+          type="button"
+          key={o.key}
+          role="radio"
+          aria-checked={value === o.key}
+          className={value === o.key ? "option on" : "option"}
+          onClick={() => onPick(o.key)}
+        >
+          {o.icon && (
+            <span className="option-icon" aria-hidden="true">
+              {o.icon}
+            </span>
+          )}
+          <span className="option-text">
+            {o.label}
+            {o.sub && <small>{o.sub}</small>}
+          </span>
+          <span className="option-dot" aria-hidden="true" />
+        </button>
+      ))}
+    </div>
+  );
+}
+
 function BackButton({ onClick, label = "Back" }: { onClick: () => void; label?: string }) {
   return (
     <button type="button" className="ghost back" onClick={onClick}>
@@ -612,13 +1001,29 @@ function BackButton({ onClick, label = "Back" }: { onClick: () => void; label?: 
   );
 }
 
-function Nav({ back, backLabel, next = "Continue", disabled }: { back?: () => void; backLabel?: string; next?: string; disabled?: boolean }) {
+function Nav({
+  back,
+  next = "Continue",
+  disabled,
+  onNext,
+}: {
+  back?: () => void;
+  next?: string;
+  disabled?: boolean;
+  onNext?: () => void;
+}) {
   return (
     <div className="nav">
-      {back && <BackButton onClick={back} label={backLabel} />}
-      <button type="submit" disabled={disabled}>
-        {next}
-      </button>
+      {back && <BackButton onClick={back} />}
+      {onNext ? (
+        <button type="button" disabled={disabled} onClick={onNext}>
+          {next}
+        </button>
+      ) : (
+        <button type="submit" disabled={disabled}>
+          {next}
+        </button>
+      )}
     </div>
   );
 }

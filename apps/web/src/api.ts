@@ -31,6 +31,8 @@ export type EventName =
   | "waitlist_view"
   | "waitlist_signup_click"
   | "onboarding_started"
+  | "onboarding_step"
+  | "onboarding_answer"
   | "firm_matched"
   | "account_view"
   | "paywall_view"
