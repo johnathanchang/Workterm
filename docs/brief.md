@@ -48,8 +48,8 @@ Offerloop and Whali target big companies (banking, consulting, tech). We cover a
 
 ## Pricing
 
-- Free: see matches plus 5 emails.
-- Paid: one price per co-op term, about $30 to $40.
+- Hard paywall after the matches reveal and sign-up. No free plan, no free trial (decision 0005).
+- Two options on `#/pricing`: Monthly ($25 a month, renews) and Per term ($45, one time). Money-back policy to be decided.
 - Why per term: see `docs/decisions/0002-per-term-pricing.md`.
 
 ## Risks and counters

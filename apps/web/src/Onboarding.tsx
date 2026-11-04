@@ -2,12 +2,13 @@ import { FormEvent, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { type EventName, track } from "./api";
 import AuthButtons from "./AuthButtons";
-import { clearPrefill, readPrefill } from "./prefill";
+import { clearPrefill, readPrefill, savePricingContext } from "./prefill";
 import { ALL_ROLES, PROGRAMS, ROLES, SCHOOLS, suggestedRoles } from "./lists";
 import Suggest from "./Suggest";
 
-// Rule 10: questions, then "Finding your firms…", then the matched firms (the aha moment), then account, then the paywall.
-type Step = "about" | "goals" | "resume" | "analyzing" | "matches" | "account" | "plans" | "done";
+// Rule 10: About you, sign-up, Your roles, Resume, then "Finding your firms…", which opens the pricing page (#/pricing), the paywall.
+// The matches list and the summary screens were removed.
+type Step = "about" | "goals" | "resume" | "analyzing" | "account";
 
 // The progress bar covers the questions only.
 const STEPS: { key: Step; label: string }[] = [
@@ -19,10 +20,8 @@ const STEPS: { key: Step; label: string }[] = [
 // The funnel event sent when each screen first shows.
 const STEP_EVENTS: Partial<Record<Step, EventName>> = {
   about: "onboarding_started",
-  matches: "firm_matched",
+  analyzing: "firm_matched", // The matches list screen is gone, so this fires when "Finding your firms…" starts.
   account: "account_view",
-  plans: "paywall_view",
-  done: "onboarding_completed",
 };
 
 // Lines that tick off one by one on the "Finding your firms…" screen.
@@ -98,10 +97,7 @@ export default function Onboarding() {
   const [moreRoles, setMoreRoles] = useState(false);
   const [where, setWhere] = useState("");
   const [file, setFile] = useState<File | null>(null);
-  // "Edit" on the summary sends the student to one screen, then straight back to the summary.
-  const [returnTo, setReturnTo] = useState<Step | null>(null);
   const [found, setFound] = useState(0);
-  const [plan, setPlan] = useState<"free" | "pro">("pro");
   const terms = upcomingTerms();
   const matches = exampleMatches(jobs, where, program);
 
@@ -114,14 +110,14 @@ export default function Onboarding() {
     if (event) track(event);
   }, [step]);
 
-  // Tick the "Finding your firms…" lines, then show the matches.
+  // Tick the "Finding your firms…" lines, then go to the account screen.
   useEffect(() => {
     if (step !== "analyzing") return;
     setFound(0);
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const tick = reduce ? 300 : FINDING_MS;
     const timers = FINDING.map((_, i) => setTimeout(() => setFound(i + 1), tick * (i + 1)));
-    timers.push(setTimeout(() => setStep("matches"), tick * (FINDING.length + 1)));
+    timers.push(setTimeout(finish, tick * (FINDING.length + 1)));
     return () => timers.forEach(clearTimeout);
   }, [step]);
 
@@ -157,7 +153,7 @@ export default function Onboarding() {
   }, []);
 
   // Each screen is a browser history entry, so the header arrows and the browser's own back and forward step through
-  // sign-up. "Finding your firms…" replaces itself with the matches, so going back from the matches lands on the resume.
+  // sign-up. "Finding your firms…" replaces itself with the account screen, so going back from there lands on the resume.
   const fromHistory = useRef(false);
   const lastStep = useRef<Step | null>(null);
   useEffect(() => {
@@ -170,7 +166,7 @@ export default function Onboarding() {
       return;
     }
     const entry = { step };
-    if (prev === null || (prev === "analyzing" && step === "matches")) history.replaceState(entry, "");
+    if (prev === null) history.replaceState(entry, "");
     else history.pushState(entry, "");
   }, [step]);
   useEffect(() => {
@@ -178,7 +174,6 @@ export default function Onboarding() {
       const to = (e.state as { step?: Step } | null)?.step;
       if (!to || to === "analyzing") return;
       fromHistory.current = true;
-      setReturnTo(null);
       setStep(to);
     };
     window.addEventListener("popstate", onPop);
@@ -210,22 +205,21 @@ export default function Onboarding() {
   const roleChips = [...suggested, ...ownRoles, ...otherRoles.filter((r) => moreRoles || jobs.includes(r))];
 
   const idx = STEPS.findIndex((s) => s.key === step);
-  const go = (to: Step) => {
-    setStep(returnTo ?? to);
-    setReturnTo(null);
-  };
-  const edit = (to: Step) => {
-    setReturnTo("done");
-    setStep(to);
+  const go = (to: Step) => setStep(to);
+  // "Finding your firms…" is the last step. Hand the pricing page what it needs to speak to this student, then open it.
+  const finish = () => {
+    track("onboarding_completed");
+    savePricingContext({ name, term, jobs, firms: matches.length, top: matches.slice(0, 3).map((m) => ({ firm: m.firm, role: m.role, fit: m.fit })) });
+    window.location.hash = "#/pricing";
   };
   const back = idx > 0 ? () => history.back() : () => (window.location.hash = "#/");
 
-  // Header arrows. First screen: next only. Summary: back only. "Finding your firms…": none.
+  // Header arrows. First screen: next only. "Finding your firms…": none.
   // Next does what the screen's main button does, so the "fill out this field" bubble still shows.
   const [arrowSlot, setArrowSlot] = useState<HTMLElement | null>(null);
   useEffect(() => setArrowSlot(document.getElementById("header-arrows")), []);
   const showBack = step !== "about" && step !== "analyzing";
-  const showNext = step !== "done" && step !== "analyzing";
+  const showNext = step !== "analyzing";
   // → is faded until the screen is done. The resume is optional, and signing up must be done with a sign-up button.
   const stepDone: Partial<Record<Step, boolean>> = {
     about: [name, school, program, level, term].every((v) => v.trim() !== ""),
@@ -235,8 +229,7 @@ export default function Onboarding() {
   const nextDisabled = stepDone[step] === false;
   function next() {
     if (nextDisabled) return;
-    if (step === "matches") setStep("account");
-    else cardRef.current?.querySelector("form")?.requestSubmit();
+    cardRef.current?.querySelector("form")?.requestSubmit();
   }
   const arrows = (
     <>
@@ -292,7 +285,7 @@ export default function Onboarding() {
             className="stack"
             onSubmit={(e) => {
               e.preventDefault();
-              go("goals");
+              go("account");
             }}
           >
             <h1 className="authtitle">Tell us about you</h1>
@@ -312,19 +305,24 @@ export default function Onboarding() {
             <div className="row">
               <label>
                 Year of study
-                <select value={level} onChange={(e) => setLevel(e.target.value)} required>
+                {/* defaultValue, not value: the browser keeps the pick itself, so a re-render while the dropdown is open cannot undo it. */}
+                <select defaultValue={level} onChange={(e) => setLevel(e.target.value)} required>
                   <option value="">Choose</option>
                   {LEVELS.map((l) => (
-                    <option key={l}>{l}</option>
+                    <option key={l} value={l}>
+                      {l}
+                    </option>
                   ))}
                 </select>
               </label>
               <label>
                 Next co-op term
-                <select value={term} onChange={(e) => setTerm(e.target.value)} required>
+                <select defaultValue={term} onChange={(e) => setTerm(e.target.value)} required>
                   <option value="">Choose</option>
                   {terms.map((t) => (
-                    <option key={t}>{t}</option>
+                    <option key={t} value={t}>
+                      {t}
+                    </option>
                   ))}
                 </select>
               </label>
@@ -448,151 +446,17 @@ export default function Onboarding() {
           </div>
         )}
 
-        {step === "matches" && (
-          <div className="stack">
-            <p className="eyebrow-small">Your matches</p>
-            <h1 className="authtitle">We found {matches.length} firms that fit you.</h1>
-            <p className="lead small">
-              Ranked by fit for {listOf(jobs.slice(0, 3))}
-              {term ? ` in ${term}` : ""}. Some of them do not post jobs, so most students never find them.
-            </p>
-            <ol className="matches">
-              {matches.map((m) => (
-                <li key={m.firm}>
-                  <div>
-                    <strong>{m.firm}</strong>
-                    <span className="match-role">{m.role}</span>
-                    <span className="match-why">{m.why}</span>
-                    {m.hidden && <span className="pill gold">Not posted</span>}
-                  </div>
-                  <span className="pill green">{m.fit}% fit</span>
-                </li>
-              ))}
-            </ol>
-            <p className="notice">Preview: these are examples. Real matches from your resume arrive when Workterm opens.</p>
-            <div className="nav">
-              <BackButton onClick={() => history.back()} />
-              <button type="button" onClick={() => setStep("account")}>
-                Save my matches
-              </button>
-            </div>
-          </div>
-        )}
-
         {step === "account" && (
           <div className="stack">
-            <h1 className="authtitle">Save your matches</h1>
-            <p className="lead small">Sign up with your school account to keep your matches and start applying.</p>
-            <AuthButtons verb="Sign up" onPick={() => go("plans")} />
-            <p className="notice">Preview: this does not create an account yet.</p>
-            <div className="nav">
-              <BackButton onClick={() => history.back()} />
-            </div>
+            <h1 className="authtitle">Create your account</h1>
+            <p className="lead small">Sign up with your school account to see your matches and start applying.</p>
+            <AuthButtons verb="Sign up" note={false} onPick={() => go("goals")} />
             <p className="fine center">
               Already have an account? <a href="#/login">Log in</a>
             </p>
           </div>
         )}
 
-        {step === "plans" && (
-          <form
-            className="stack"
-            onSubmit={(e) => {
-              e.preventDefault();
-              if (plan === "pro") track("trial_start_click");
-              go("done");
-            }}
-          >
-            <h1 className="authtitle">Choose your plan</h1>
-            <p className="lead small">Start free. Upgrade when you are ready to apply to more firms.</p>
-            <div className="plans" role="radiogroup" aria-label="Plans">
-              <label className={plan === "pro" ? "plan on" : "plan"}>
-                <input type="radio" name="plan" checked={plan === "pro"} onChange={() => setPlan("pro")} />
-                <span className="plan-head">
-                  <strong>Pro</strong>
-                  <span className="pill gold">Free trial</span>
-                </span>
-                <span className="plan-price">
-                  $20 <small>a month after your trial</small>
-                </span>
-                <ul>
-                  <li>Everything in Free</li>
-                  <li>A tailored resume for every job</li>
-                  <li>Emails sent from your Gmail, after you approve</li>
-                  <li>Follow-ups and reply tracking</li>
-                </ul>
-              </label>
-              <label className={plan === "free" ? "plan on" : "plan"}>
-                <input type="radio" name="plan" checked={plan === "free"} onChange={() => setPlan("free")} />
-                <span className="plan-head">
-                  <strong>Free</strong>
-                </span>
-                <span className="plan-price">
-                  $0 <small>forever</small>
-                </span>
-                <ul>
-                  <li>See your matches</li>
-                  <li>Rate your resume</li>
-                  <li>Send 5 emails</li>
-                </ul>
-              </label>
-            </div>
-            <Nav back={() => history.back()} next={plan === "pro" ? "Start free trial" : "Continue with Free"} />
-            <p className="fine center">Cancel anytime. We remind you before your trial ends. We cannot promise a placement.</p>
-            <p className="notice">Preview: no payment is taken. Payments open when Workterm opens.</p>
-          </form>
-        )}
-
-        {step === "done" && (
-          <div className="stack">
-            <h1 className="authtitle">You are all set.</h1>
-            <ul className="summary">
-              <li>
-                <span>Name</span> {name}
-                <button type="button" className="linkish edit" onClick={() => edit("about")} aria-label="Edit name">
-                  Edit
-                </button>
-              </li>
-              <li>
-                <span>School</span> {school}, {program}, {level}
-                <button type="button" className="linkish edit" onClick={() => edit("about")} aria-label="Edit school">
-                  Edit
-                </button>
-              </li>
-              <li>
-                <span>Next term</span> {term}
-                <button type="button" className="linkish edit" onClick={() => edit("about")} aria-label="Edit next term">
-                  Edit
-                </button>
-              </li>
-              <li>
-                <span>Roles</span> {jobs.join(", ")}
-                {where ? ` · ${where}` : ""}
-                <button type="button" className="linkish edit" onClick={() => edit("goals")} aria-label="Edit roles">
-                  Edit
-                </button>
-              </li>
-              <li>
-                <span>Resume</span> {file ? file.name : "Not added yet"}
-                <button type="button" className="linkish edit" onClick={() => edit("resume")} aria-label="Edit resume">
-                  Edit
-                </button>
-              </li>
-              <li>
-                <span>Plan</span> {plan === "pro" ? "Pro, free trial" : "Free"}
-                <button type="button" className="linkish edit" onClick={() => edit("plans")} aria-label="Edit plan">
-                  Edit
-                </button>
-              </li>
-            </ul>
-            <p className="notice">
-              Preview only: nothing was saved. Resume rating, job matches and tailored resumes open when Workterm opens.
-            </p>
-            <a className="btn" href="#/">
-              Back to home
-            </a>
-          </div>
-        )}
       </div>
     </main>
   );

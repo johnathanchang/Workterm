@@ -13,6 +13,9 @@ We are in Phase 0, before Gate A. Web first (decision 0001), so iOS and Android 
   - [ ] Deploy the waitlist server to staging.
   - [x] Waitlist web page (`apps/web`, React + Vite) that calls `POST /waitlist` and `POST /events`. Checked in a real browser at desktop and phone width. Run both with `bun dev`, then open http://localhost:5173 (add `?src=tiktok` to tag the source).
   - [ ] Read competitor reviews and write 10 video hooks.
+  - [x] Pricing page `#/pricing` right after the "Finding your firms…" screen (decision 0005): personalized, Monthly $25 and Per term $45, no free plan, no trial. Preview only, no payment yet. Events `paywall_view`, `checkout_click`.
+  - [ ] **[HUMAN]** Decide the real money-back policy (the Refund page is placeholder text) and confirm the two prices.
+  - [ ] **[HUMAN]** Create a Stripe account. Then: Stripe test-mode checkout, `/webhooks/stripe`, `entitlements` migration, `GET /me/entitlements`.
 - [ ] **[HUMAN]** Post the videos and waitlist for one week.
 - [ ] **[AGENT]** Run chapter 12 unit economics at the human's price.
 - **Gate A, build only if:** scorecard ≥ 30/35 for us (playbook: 25) with no 1s · demand signal (saves, shares, "what app is this?", waitlist ≥ 10% of visitors) · revenue per download (chapter 12) well above cost per download.

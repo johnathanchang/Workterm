@@ -19,7 +19,7 @@ const MicrosoftIcon = () => (
 );
 
 // Two school-account buttons. The real sign-in (Better Auth) plugs into onPick later.
-export default function AuthButtons({ onPick, verb }: { onPick: (p: Provider) => void; verb: string }) {
+export default function AuthButtons({ onPick, verb, note = true }: { onPick: (p: Provider) => void; verb: string; note?: boolean }) {
   return (
     <div className="providers">
       <button type="button" className="provider" onClick={() => onPick("google")}>
@@ -28,7 +28,7 @@ export default function AuthButtons({ onPick, verb }: { onPick: (p: Provider) =>
       <button type="button" className="provider" onClick={() => onPick("microsoft")}>
         <MicrosoftIcon /> {verb} with Microsoft
       </button>
-      <p className="fine">Use your school account (Google Workspace or Outlook). We only read your name and email.</p>
+      {note && <p className="fine">Use your school account (Google Workspace or Outlook). We only read your name and email.</p>}
     </div>
   );
 }

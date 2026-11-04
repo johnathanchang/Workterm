@@ -252,7 +252,7 @@ const ROWS: { label: string; cells: Cell[]; price?: boolean }[] = [
   {
     label: "Price",
     price: true,
-    cells: [{ main: "$20 a month" }, "Free", "$20 a month", "$39.99 a month"],
+    cells: [{ main: "$45 a term", sub: "or $25 a month" }, "Free", "$20 a month", "$39.99 a month"],
   },
 ];
 

@@ -1513,6 +1513,149 @@ select:focus-visible {
   font-size: 0.9rem;
 }
 
+.plan-sub {
+  font-size: 0.88rem;
+  color: var(--muted);
+}
+
+.matches.teaser li.more {
+  justify-content: center;
+  color: var(--muted);
+  font-size: 0.9rem;
+  border-style: dashed;
+}
+
+.perks {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.92rem;
+}
+
+.perks li {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.perks svg {
+  flex: none;
+  margin-top: 4px;
+  color: var(--accent);
+}
+
+/* Pricing page (#/pricing): two plan cards on light surfaces over the red page. */
+.pricing {
+  display: grid;
+  gap: 20px;
+  width: min(100% - 32px, 820px);
+  margin: 0 auto;
+  padding: 24px 0 64px;
+}
+
+.pricing-head {
+  display: grid;
+  gap: 10px;
+  text-align: center;
+}
+
+.pricing-head .lead {
+  margin-inline: auto;
+}
+
+.pricing-matches {
+  --ink: #3b0000;
+  --muted: #7a4a3a;
+  --line: rgba(59, 0, 0, 0.18);
+  width: min(100%, 520px);
+  margin-inline: auto;
+  color: var(--ink);
+  text-align: left;
+}
+
+.price-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+  align-items: stretch;
+}
+
+.price-card {
+  --ink: #3b0000;
+  --muted: #7a4a3a;
+  --line: rgba(59, 0, 0, 0.18);
+  display: grid;
+  align-content: start;
+  gap: 12px;
+  padding: 22px;
+  border: 1.5px solid transparent;
+  border-radius: 16px;
+  background: var(--card);
+  color: var(--ink);
+  text-align: left;
+}
+
+.price-card .fine {
+  text-align: center;
+}
+
+.price-card.best {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent), 0 16px 40px -18px rgba(0, 0, 0, 0.55);
+}
+
+.price-card h2 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.price-card .plan-price {
+  margin: 0;
+}
+
+.plan-price.big {
+  font-size: 2.6rem;
+}
+
+.price-card .plan-sub {
+  margin: 0;
+  min-height: 2.6em;
+}
+
+.price-card .fine {
+  margin: 0;
+}
+
+.pricing-save {
+  margin: 0;
+  text-align: center;
+  color: var(--muted);
+}
+
+.pricing .fine,
+.pricing .notice {
+  margin-inline: auto;
+  text-align: center;
+}
+
+.pricing .notice {
+  --ink: #3b0000;
+  color: var(--ink);
+}
+
+@media (max-width: 640px) {
+  .price-grid {
+    grid-template-columns: 1fr;
+  }
+
+  /* Best value first on a phone, so it is the first thing seen. */
+  .price-card.best {
+    order: -1;
+  }
+}
+
 /* Type-to-filter dropdown for School and Program on the sign-up page. */
 .suggest {
   position: relative;

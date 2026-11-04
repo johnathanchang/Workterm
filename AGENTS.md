@@ -6,7 +6,7 @@
 
 For any student trying to land a co-op, Workterm builds a resume for each job, rates your resume against it, finds roles that fit you, and helps you apply to many at once. Decision 0003 widened the audience from Canadian engineering students.
 UX references: to pick in Phase 1 (chapter 09). Domain watch-outs: never promise a placement, spam rules (CASL), personal data in resumes and Gmail.
-Pricing: free to see matches plus 5 emails. Paid is one price per co-op term, about $30 to $40. Details in `docs/brief.md`.
+Pricing: hard paywall after the matches reveal (decision 0005). Two options on `#/pricing`: Monthly ($25 a month) and Per term ($45, one time). No free plan or trial. Details in `docs/brief.md`.
 We are in Phase 0, before Gate A. The only code so far is the waitlist server in `apps/api` and the waitlist page in `apps/web`. Track status in `docs/progress.md`.
 
 ## How to work with Johnathan
@@ -24,7 +24,7 @@ We are in Phase 0, before Gate A. The only code so far is the waitlist server in
 - Web first (decision 0001). No iOS or Android work until `docs/later.md` says so.
 - API: one Cloudflare Worker (`apps/api/src/index.ts`), plain `fetch` handler, no router framework
 - Data: D1 plain SQL (`apps/api/migrations/*.sql`), R2, KV, Durable Objects, Queues, Workflows
-- Auth: Better Auth, Sign in with Google first. Gmail send-only scope. Students can see firm matches before signing up.
+- Auth: Better Auth, Sign in with Google first. Gmail send-only scope. Students see firm matches before signing up, then hit the paywall.
 - AI: DeepSeek via OpenRouter behind AI Gateway (`apps/api/src/ai.ts`), prompts in `apps/api/prompts/`
 - Payments: Stripe (web). The `entitlements` table is the source of truth.
 - Analytics and errors: Tinybird via `POST /events`
@@ -51,8 +51,8 @@ We are in Phase 0, before Gate A. The only code so far is the waitlist server in
 7. Resumes and Gmail access are personal data. Collect the minimum. Gmail scope is send-only.
 8. Sending limits: students send from their own Gmail, with daily caps, one unique email per firm, one contact per firm at a time.
 9. Key events: `firm_matched`, `email_drafted`, `email_approved`, `email_sent`, `reply_received`, `coop_landed`. Every user-visible feature emits an event.
-10. Onboarding: questions, then "Finding your firms…", then the matched firm list (the aha moment), then the paywall.
-11. Retention is by email: reply alerts, a weekly recap, a trial-ending reminder.
+10. Onboarding: questions, then "Finding your firms…", then the pricing page (the paywall). Order: About you, sign-up, Your roles, Resume, "Finding your firms…", pricing. The matched firm list and summary screens were removed.
+11. Retention is by email: reply alerts, a weekly recap, a term-ending reminder.
 12. Distribution extras: SEO pages per city and program, and an "I landed my co-op" share card.
 13. Schema changes are SQL migrations, staging first. Never touch production data, deploy to production, or commit secrets.
 14. Decisions go in `docs/decisions/NNNN-title.md`. Other ideas go in `docs/later.md`.

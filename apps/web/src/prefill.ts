@@ -22,6 +22,36 @@ export function readPrefill(): Partial<Prefill> {
   }
 }
 
+// What the pricing page needs to speak to this student. Same rules: this tab only, never in the URL.
+const PRICING_KEY = "workterm.pricing";
+
+export type PricingContext = {
+  name: string;
+  term: string;
+  jobs: string[];
+  firms: number;
+  top: { firm: string; role: string; fit: number }[];
+};
+
+export function savePricingContext(c: PricingContext): void {
+  try {
+    sessionStorage.setItem(PRICING_KEY, JSON.stringify(c));
+  } catch {
+    // Pricing still works without it, just not personalized.
+  }
+}
+
+export function readPricingContext(): PricingContext | null {
+  try {
+    const raw = sessionStorage.getItem(PRICING_KEY);
+    const c = raw ? (JSON.parse(raw) as Partial<PricingContext>) : null;
+    if (!c || typeof c !== "object" || !Array.isArray(c.top) || !Array.isArray(c.jobs)) return null;
+    return { name: String(c.name ?? ""), term: String(c.term ?? ""), jobs: c.jobs, firms: Number(c.firms) || c.top.length, top: c.top };
+  } catch {
+    return null;
+  }
+}
+
 // Called once sign-up has used the answers, so a later visit starts fresh.
 export function clearPrefill(): void {
   try {

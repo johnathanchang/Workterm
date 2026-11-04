@@ -139,7 +139,7 @@ export default function Home() {
             >
               Start for free
             </button>
-            <p className="cta-note">Start with a free trial. Cancel anytime.</p>
+            <p className="cta-note">See your matches first. 7-day money-back guarantee.</p>
           </section>
 
           <section className="logos" aria-label="Companies you can target">

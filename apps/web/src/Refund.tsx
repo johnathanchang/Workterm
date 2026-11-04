@@ -6,10 +6,10 @@ export default function Refund() {
         <p className="fine center">Last updated: November 2026</p>
 
         <h2>Right now</h2>
-        <p>Workterm is not taking payments yet. Starting is free, and so is seeing your matches and sending your first 5 emails.</p>
+        <p>Workterm is not taking payments yet. Starting is free, and so is answering the questions and seeing your matches. Paid access opens when Workterm opens.</p>
 
         <h2>How paid plans work</h2>
-        <p>Paid access is one price per co-op term, about $30 to $40. You pay once. It does not renew on its own.</p>
+        <p>Paid access is $45 for a co-op term, paid once, or $25 a month until you cancel.</p>
 
         <h2>Our refund promise</h2>
         <p>If Workterm is not useful to you, email us within 7 days of paying and we will refund you in full. No long form and no hard questions.</p>

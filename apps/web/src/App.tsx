@@ -4,6 +4,7 @@ import Competitor, { RIVALS } from "./Competitors";
 import Home from "./Home";
 import Login from "./Login";
 import Onboarding from "./Onboarding";
+import Pricing from "./Pricing";
 import Privacy from "./Privacy";
 import Refund from "./Refund";
 import Terms from "./Terms";
@@ -66,6 +67,8 @@ export default function App() {
         <Login />
       ) : route === "/signup" ? (
         <Onboarding />
+      ) : route === "/pricing" ? (
+        <Pricing />
       ) : route === "/terms" ? (
         <Terms />
       ) : route === "/privacy" ? (

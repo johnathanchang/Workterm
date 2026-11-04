@@ -34,7 +34,7 @@ export type EventName =
   | "firm_matched"
   | "account_view"
   | "paywall_view"
-  | "trial_start_click"
+  | "checkout_click"
   | "onboarding_completed";
 
 export function track(name: EventName, source?: string): void {
