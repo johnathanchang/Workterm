@@ -52,6 +52,8 @@ test("bad email and bad body are rejected", async () => {
 test("events only accept known names", async () => {
   expect((await post("/events", { name: "page_view" })).status).toBe(201);
   expect((await post("/events", { name: "firm_matched" })).status).toBe(201);
+  expect((await post("/events", { name: "onboarding_step", source: "applied" })).status).toBe(201);
+  expect((await post("/events", { name: "onboarding_answer", source: "source:TikTok" })).status).toBe(201);
   expect((await post("/events", { name: "hack" })).status).toBe(400);
 });
 

@@ -14,6 +14,9 @@ const ALLOWED_EVENTS = new Set([
   "waitlist_signup_click",
   // Onboarding funnel (rule 10).
   "onboarding_started",
+  // One per sign-up screen reached (source = screen), and answers useful for go-to-market (source = "source:TikTok").
+  "onboarding_step",
+  "onboarding_answer",
   "firm_matched",
   "account_view",
   "paywall_view",

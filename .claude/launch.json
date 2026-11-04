@@ -1,0 +1,6 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    { "name": "workterm-web", "runtimeExecutable": "bun", "runtimeArgs": ["dev"], "port": 5173 }
+  ]
+}
