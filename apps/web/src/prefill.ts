@@ -22,6 +22,24 @@ export function readPrefill(): Partial<Prefill> {
   }
 }
 
+// A random id this browser keeps, so a payment can be matched to the student until real sign-in exists.
+// It is not a password and holds no personal data. It moves to the real user id when sign-in arrives.
+const REF_KEY = "workterm.ref";
+let memoryRef: string | null = null;
+
+export function getRef(): string {
+  try {
+    const saved = localStorage.getItem(REF_KEY);
+    if (saved && /^[0-9a-f-]{36}$/i.test(saved)) return saved;
+    const fresh = crypto.randomUUID();
+    localStorage.setItem(REF_KEY, fresh);
+    return fresh;
+  } catch {
+    // Storage blocked (private window). The id then lasts only until the page is closed.
+    return (memoryRef ??= crypto.randomUUID());
+  }
+}
+
 // What the pricing page needs to speak to this student. Same rules: this tab only, never in the URL.
 const PRICING_KEY = "workterm.pricing";
 

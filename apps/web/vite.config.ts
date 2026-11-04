@@ -10,6 +10,8 @@ export default defineConfig({
     proxy: {
       "/waitlist": "http://localhost:8787",
       "/events": "http://localhost:8787",
+      "/checkout": "http://localhost:8787",
+      "/me": "http://localhost:8787",
     },
   },
 });

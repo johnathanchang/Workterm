@@ -15,7 +15,10 @@ We are in Phase 0, before Gate A. Web first (decision 0001), so iOS and Android 
   - [ ] Read competitor reviews and write 10 video hooks.
   - [x] Pricing page `#/pricing` right after the "Finding your firms…" screen (decision 0005): personalized, Monthly $25 and Per term $45, no free plan, no trial. Preview only, no payment yet. Events `paywall_view`, `checkout_click`.
   - [ ] **[HUMAN]** Decide the real money-back policy (the Refund page is placeholder text) and confirm the two prices.
-  - [ ] **[HUMAN]** Create a Stripe account. Then: Stripe test-mode checkout, `/webhooks/stripe`, `entitlements` migration, `GET /me/entitlements`.
+  - [x] Stripe code (test mode ready): `POST /checkout`, `POST /webhooks/stripe` (signature checked, each event handled once), `GET /me/entitlements`, migration `0002_entitlements.sql`, `#/welcome` page. Tested with Stripe faked (11 tests pass). Not yet tried against real Stripe.
+  - [ ] **[HUMAN]** Create a Stripe account (test mode). Copy `apps/api/.dev.vars.example` to `apps/api/.dev.vars` and paste the test secret key, then run `stripe listen --forward-to localhost:8787/webhooks/stripe` and paste the `whsec_` secret it prints.
+  - [ ] Try a real test payment end to end (card 4242 4242 4242 4242), then set the same secrets on staging with `wrangler secret put`.
+  - [ ] Link payments to the real account once Better Auth sign-in exists (today the browser keeps a random id).
 - [ ] **[HUMAN]** Post the videos and waitlist for one week.
 - [ ] **[AGENT]** Run chapter 12 unit economics at the human's price.
 - **Gate A, build only if:** scorecard ≥ 30/35 for us (playbook: 25) with no 1s · demand signal (saves, shares, "what app is this?", waitlist ≥ 10% of visitors) · revenue per download (chapter 12) well above cost per download.

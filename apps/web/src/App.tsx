@@ -8,6 +8,7 @@ import Pricing from "./Pricing";
 import Privacy from "./Privacy";
 import Refund from "./Refund";
 import Terms from "./Terms";
+import Welcome from "./Welcome";
 
 // Tiny hash router: #/login, #/signup, #/blog/<slug>, #/terms, #/privacy, #/refund and #/compare/<slug>. No router library needed yet.
 function useRoute(): string {
@@ -69,6 +70,8 @@ export default function App() {
         <Onboarding />
       ) : route === "/pricing" ? (
         <Pricing />
+      ) : route === "/welcome" ? (
+        <Welcome />
       ) : route === "/terms" ? (
         <Terms />
       ) : route === "/privacy" ? (

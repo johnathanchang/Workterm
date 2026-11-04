@@ -1,0 +1,6 @@
+# Copy this file to apps/api/.dev.vars for local work. .dev.vars is never committed.
+# Use TEST keys only (they start with sk_test_). Never paste a live key here.
+# For staging or production, set these with: wrangler secret put STRIPE_SECRET_KEY --env staging
+STRIPE_SECRET_KEY=sk_test_xxx
+# From `stripe listen --forward-to localhost:8787/webhooks/stripe`, or the endpoint in the Stripe dashboard.
+STRIPE_WEBHOOK_SECRET=whsec_xxx

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { track } from "./api";
-import { readPricingContext } from "./prefill";
+import { startCheckout, track } from "./api";
+import { getRef, readPricingContext } from "./prefill";
 
 // Hard paywall (decision 0005): two options, no free plan, no trial.
 // The term plan is one-time and never renews. The monthly plan renews every month until the student cancels.
@@ -47,6 +47,26 @@ const listOf = (items: string[]) => (items.length < 2 ? items.join("") : `${item
 export default function Pricing() {
   // Set on the last onboarding screen. Missing if someone opens #/pricing directly, and then the page is not personalized.
   const [ctx] = useState(readPricingContext);
+  const [busy, setBusy] = useState<PlanId | null>(null);
+  const [problem, setProblem] = useState("");
+
+  // Sends the student to Stripe's page to pay. Their card details never touch our site.
+  async function buy(plan: PlanId) {
+    track("checkout_click", plan);
+    setProblem("");
+    setBusy(plan);
+    const result = await startCheckout(plan, getRef());
+    if (typeof result === "object") {
+      window.location.assign(result.url);
+      return;
+    }
+    setBusy(null);
+    setProblem(
+      result === "unavailable"
+        ? "Payments are not open yet. We will let you know when they are."
+        : "Something went wrong opening checkout. Please try again.",
+    );
+  }
 
   // One paywall_view per visit. StrictMode runs effects twice in dev, so the ref keeps it to one.
   const sent = useRef(false);
@@ -89,16 +109,19 @@ export default function Pricing() {
                 </li>
               ))}
             </ul>
-            <button
-              type="button"
-              onClick={() => track("checkout_click", p.id)}
-            >
-              {p.button}
+            <button type="button" disabled={busy !== null} onClick={() => buy(p.id)}>
+              {busy === p.id ? "Opening checkout…" : p.button}
             </button>
             <p className="fine center">{p.fine}</p>
           </section>
         ))}
       </div>
+
+      {problem && (
+        <p className="notice" role="alert">
+          {problem}
+        </p>
+      )}
 
       <p className="fine center">
         <strong>Money-back guarantee.</strong> The exact terms are being finalized. We cannot promise a placement.

@@ -1,9 +1,9 @@
 // apps/api/src/index.ts: the whole API as one fetch handler. No router framework.
 
-interface Env {
-  DB: D1Database;
+import { createCheckout, getEntitlements, stripeWebhook, type StripeEnv } from "./stripe";
+
+interface Env extends StripeEnv {
   APP_ENV: string;
-  WEB_ORIGIN: string;
 }
 
 const MAX_BODY_BYTES = 2_000;
@@ -43,6 +43,15 @@ export default {
           break;
         case "POST /events":
           response = await logEvent(request, env);
+          break;
+        case "POST /checkout":
+          response = await createCheckout(await readJson(request), env);
+          break;
+        case "GET /me/entitlements":
+          response = await getEntitlements(url, env);
+          break;
+        case "POST /webhooks/stripe":
+          response = await stripeWebhook(request, env);
           break;
         default:
           response = Response.json({ error: "not_found" }, { status: 404 });

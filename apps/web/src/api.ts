@@ -25,6 +25,37 @@ export async function joinWaitlist(input: {
   }
 }
 
+export type PlanId = "month" | "term";
+
+// Asks the API for a Stripe Checkout page. "unavailable" means payments are not switched on yet.
+export type CheckoutResult = { url: string } | "unavailable" | "error";
+
+export async function startCheckout(plan: PlanId, ref: string): Promise<CheckoutResult> {
+  try {
+    const res = await fetch(`${BASE}/checkout`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ plan, ref }),
+    });
+    if (res.status === 503) return "unavailable";
+    const data = (await res.json().catch(() => null)) as { url?: string } | null;
+    return res.ok && data?.url ? { url: data.url } : "error";
+  } catch {
+    return "error";
+  }
+}
+
+export type Entitlement = { active: boolean; plan: PlanId | null; current_period_end: number | null };
+
+export async function getEntitlement(ref: string): Promise<Entitlement | null> {
+  try {
+    const res = await fetch(`${BASE}/me/entitlements?ref=${encodeURIComponent(ref)}`);
+    return res.ok ? ((await res.json()) as Entitlement) : null;
+  } catch {
+    return null;
+  }
+}
+
 // Fire and forget. A failed tracking call must never break the page.
 export type EventName =
   | "page_view"
