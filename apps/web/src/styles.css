@@ -1042,7 +1042,7 @@ select:focus-visible {
   top: 50%;
   right: 12px;
   margin-top: -10px;
-  animation: tick-pop 0.35s cubic-bezier(0.3, 1.6, 0.5, 1) both;
+  animation: tick-pop 0.75s cubic-bezier(0.3, 1.6, 0.5, 1) both;
 }
 
 @keyframes tick-pop {
@@ -1077,109 +1077,187 @@ select:focus-visible {
   }
 }
 
-/* Step 2: outlined chips with + or a tick, and a cursor that glides between them. */
+/* Step 2: three question tiles. Each answer pops in with a "bang": a quick overshoot and a burst of lines. */
 .goals-demo {
-  position: relative;
-  gap: 12px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
 }
 
-.goal-group {
+.goal-tile {
   display: grid;
-  gap: 6px;
+  justify-items: center;
+  gap: 8px;
+  padding: 10px 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fff;
+  text-align: center;
 }
 
-.goal-group > span {
+.goal-q {
   font-size: 0.75rem;
-  font-weight: 700;
+  font-weight: 800;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--muted);
 }
 
-.goal-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-  border: 1px solid #e6dada;
-  border-radius: 10px;
-  background: #fff;
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: #6b4a4a;
-  transition: background 0.2s, border-color 0.2s, color 0.2s, transform 0.15s;
+.goal-art {
+  width: 100%;
 }
 
-.goal-chip.on {
-  border-color: #3b0000;
-  background: #fbf1f1;
-  color: #3b0000;
-  transform: scale(1.02);
+.goal-art svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 8px;
 }
 
-.demo-cursor {
+.goal-a {
+  position: relative;
+  display: inline-block;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: #990000;
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 800;
+  line-height: 1.2;
+  opacity: 0;
+  transform: scale(0);
+}
+
+.goal-tile.on .goal-a {
+  animation: bang 0.6s cubic-bezier(0.3, 1.8, 0.5, 1) both;
+}
+
+.burst {
   position: absolute;
-  top: 0;
-  left: 0;
+  top: 50%;
+  left: 50%;
+  width: 120px;
+  height: 120px;
+  margin: -60px 0 0 -60px;
+  overflow: visible;
   pointer-events: none;
-  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.3));
-  transition: transform 0.7s cubic-bezier(0.45, 0, 0.2, 1);
+  opacity: 0;
+  stroke: #ffcc00;
+  stroke-width: 5;
+  stroke-linecap: round;
 }
 
-.demo-cursor path {
-  transform-origin: 4px 2px;
-  transition: transform 0.12s;
+.goal-tile.on .burst {
+  animation: burst 0.7s ease-out both;
 }
 
-.demo-cursor.press path {
-  transform: scale(0.82);
+@keyframes bang {
+  0% {
+    opacity: 0;
+    transform: scale(0) rotate(-10deg);
+  }
+  60% {
+    opacity: 1;
+    transform: scale(1.25) rotate(3deg);
+  }
+  100% {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes burst {
+  0% {
+    opacity: 1;
+    transform: scale(0.4);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.3);
+  }
+}
+
+/* The sun turns and the gears mesh, slowly, all the time. */
+.sun-rays {
+  animation: spin 24s linear infinite;
+}
+
+.gear {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.gear.spin {
+  animation: spin 12s linear infinite;
+}
+
+.gear.spin-back {
+  animation: spin 7.4s linear infinite reverse;
+}
+
+@keyframes spin {
+  to {
+    rotate: 360deg;
+  }
 }
 
 /* Step 3: portrait resume, an arrow that fills left to right, then matches drop in. One 7s loop. */
 .resume-demo {
-  grid-template-columns: 110px 44px 1fr;
+  grid-template-columns: 170px 48px 1fr;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
 }
 
 .resume-page {
-  display: grid;
-  align-content: start;
-  gap: 5px;
-  aspect-ratio: 8.5 / 11;
-  padding: 10px 8px;
+  position: relative;
   border-radius: 4px;
-  background: #fff;
   box-shadow: 0 6px 14px -6px rgba(60, 0, 0, 0.35);
 }
 
-.resume-page b,
-.resume-page i {
+.resume-sheet {
+  font-family: "Times New Roman", Times, "Liberation Serif", serif;
   display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 4px;
+}
+
+/* A very light yellow wash over the whole resume. */
+.resume-page::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 4px;
+  background: rgba(255, 214, 0, 0.12);
+  pointer-events: none;
+}
+
+/* A glowing yellow line sweeps down the resume, with a soft wash trailing above it. */
+.scanner {
+  position: absolute;
+  z-index: 1;
+  left: -6px;
+  right: -6px;
+  top: 0;
   height: 3px;
   border-radius: 2px;
-  background: #e8d6d6;
+  background: #ffcc00;
+  box-shadow: 0 0 12px 3px rgba(255, 204, 0, 0.75);
+  opacity: 0;
+  animation: scan 8s ease-in-out infinite both;
 }
 
-.resume-page .r-name {
-  width: 70%;
-  height: 6px;
-  margin: 0 auto 1px;
-  background: #990000;
-}
-
-.resume-page .r-sub {
-  width: 50%;
-  margin: 0 auto 4px;
-}
-
-.resume-page .r-head {
-  margin-top: 3px;
-  background: #b98a8a;
+.scanner::before {
+  content: "";
+  position: absolute;
+  left: 6px;
+  right: 6px;
+  bottom: 3px;
+  height: 36px;
+  background: linear-gradient(rgba(255, 204, 0, 0), rgba(255, 204, 0, 0.28));
 }
 
 .fill-arrow {
-  width: 44px;
+  width: 48px;
   height: auto;
 }
 
@@ -1187,7 +1265,7 @@ select:focus-visible {
   fill: #990000;
   transform-box: fill-box;
   transform-origin: left;
-  animation: arrow-fill 7s ease-in-out infinite both;
+  animation: arrow-fill 8s ease-in-out infinite both;
 }
 
 .job-list {
@@ -1206,48 +1284,57 @@ select:focus-visible {
   border: 1px solid var(--line);
   border-radius: 8px;
   background: #fff;
-  animation: job-in 7s ease-out infinite both;
+  animation: job-in 8s ease-out infinite both;
 }
 
-.job-list li > div {
-  display: grid;
-  flex: 1;
-  min-width: 0;
+/* Matches: a 2 x 2 grid of company logos, each in its own brand colour. */
+.job-logos {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
 }
 
-.job-list strong,
-.job-list span {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.job-logos li {
+  justify-content: center;
+  aspect-ratio: 1.5;
+  padding: 0;
+  border: 0;
+  background: none;
 }
 
-.job-list strong {
-  font-size: 0.75rem;
+.job-logo {
+  width: 62%;
+  height: 62%;
+  -webkit-mask: no-repeat center / contain;
+  mask: no-repeat center / contain;
 }
 
-.job-list span {
-  font-size: 0.68rem;
-  color: var(--muted);
-}
-
-.job-list em {
-  flex: none;
-  padding: 2px 6px;
-  border-radius: 999px;
-  background: #1f9d55;
-  color: #fff;
-  font-size: 0.68rem;
-  font-style: normal;
-  font-weight: 800;
+/* Timeline: scan 0–34%, arrow fills 34–52%, matches drop in from 54%, all reset near the end. */
+@keyframes scan {
+  0% {
+    top: 0;
+    opacity: 0;
+  }
+  4% {
+    top: 0;
+    opacity: 1;
+  }
+  32% {
+    top: 100%;
+    opacity: 1;
+  }
+  36%,
+  100% {
+    top: 100%;
+    opacity: 0;
+  }
 }
 
 @keyframes arrow-fill {
   0%,
-  6% {
+  34% {
     transform: scaleX(0);
   }
-  36%,
+  52%,
   92% {
     transform: scaleX(1);
   }
@@ -1258,11 +1345,11 @@ select:focus-visible {
 
 @keyframes job-in {
   0%,
-  38% {
+  54% {
     opacity: 0;
     transform: translateY(8px) scale(0.96);
   }
-  44%,
+  60%,
   90% {
     opacity: 1;
     transform: none;
@@ -1317,6 +1404,20 @@ select:focus-visible {
   font-size: 0.88rem;
 }
 
+/* Card 1: labels and typed answers use the heading serif, so they read more formal. */
+.type-field > span {
+  font-family: "Times New Roman", Times, "Liberation Serif", serif;
+  font-size: 0.8rem;
+  font-weight: 400;
+  letter-spacing: 0.12em;
+}
+
+.type-field > strong {
+  font-family: "Times New Roman", Times, "Liberation Serif", serif;
+  font-size: 1.05rem;
+  font-weight: 400;
+}
+
 .mock-field > span {
   font-size: 0.75rem;
   font-weight: 700;
@@ -1359,13 +1460,22 @@ select:focus-visible {
 @media (prefers-reduced-motion: reduce) {
   .fill-arrow-bar,
   .job-list li,
+  .scanner,
   .field-done,
   .caret {
     animation: none;
   }
 
-  .demo-cursor {
-    display: none;
+  .sun-rays,
+  .gear,
+  .goal-tile.on .goal-a,
+  .goal-tile.on .burst {
+    animation: none;
+  }
+
+  .goal-a {
+    opacity: 1;
+    transform: none;
   }
 }
 
@@ -1977,13 +2087,13 @@ select:focus-visible {
   margin-top: 0;
 }
 
-.step-demo .type-field,
-.step-demo .goals-demo {
+.step-demo .type-field {
   max-width: 460px;
 }
 
 /* The resume loop waits until the row is on screen, so it starts from the beginning. */
 .resume-demo:not(.play) .fill-arrow-bar,
+.resume-demo:not(.play) .scanner,
 .resume-demo:not(.play) .job-list li {
   animation-play-state: paused;
 }
@@ -1997,7 +2107,8 @@ select:focus-visible {
   }
 
   .resume-demo {
-    grid-template-columns: 80px 34px 1fr;
+    grid-template-columns: 100px 32px 1fr;
+    gap: 8px;
   }
 }
 
