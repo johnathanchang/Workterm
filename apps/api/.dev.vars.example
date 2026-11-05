@@ -1,0 +1,4 @@
+# Copy to .dev.vars (gitignored). Stripe TEST mode keys only.
+STRIPE_SECRET_KEY=sk_test_xxx
+STRIPE_PRICE_ID=price_xxx
+STRIPE_WEBHOOK_SECRET=whsec_xxx
