@@ -108,141 +108,95 @@ export function TypingDemo() {
   );
 }
 
-// Step 2: three questions. Each answer pops in with a "bang", one after another, then the loop restarts.
-
-// A gear outline: teeth around a circle. Used in the machine-design drawing.
-function gearPath(cx: number, cy: number, r: number, teeth: number, depth: number): string {
-  const pts: string[] = [];
-  const step = (Math.PI * 2) / teeth;
-  for (let i = 0; i < teeth; i++) {
-    const a = i * step;
-    const corners = [
-      [a, r - depth],
-      [a + step * 0.15, r],
-      [a + step * 0.45, r],
-      [a + step * 0.6, r - depth],
-    ];
-    for (const [ang, rad] of corners) pts.push(`${(cx + rad * Math.cos(ang)).toFixed(1)},${(cy + rad * Math.sin(ang)).toFixed(1)}`);
-  }
-  return `M${pts.join("L")}Z`;
-}
-const BIG_GEAR = gearPath(0, 0, 22, 12, 5);
-const SMALL_GEAR = gearPath(0, 0, 13, 8, 4);
-
-// Summer: a warm sky with a slowly turning sun.
-const SummerArt = () => (
-  <svg viewBox="0 0 120 84">
-    <rect width="120" height="84" fill="#ffe9b0" />
-    <g transform="translate(60 44)">
-      <g className="sun-rays">
-        {Array.from({ length: 12 }, (_, i) => (
-          <line key={i} x1="0" y1="-21" x2="0" y2="-28" stroke="#f5a300" strokeWidth="3" strokeLinecap="round" transform={`rotate(${i * 30})`} />
-        ))}
-      </g>
-    </g>
-    <circle cx="60" cy="44" r="15" fill="#ffcc00" />
-    <path d="M10 26 q6 -7 13 -2 q6 -4 10 2 z M86 18 q5 -6 11 -2 q5 -3 9 2 z" fill="#fff8ec" />
-  </svg>
-);
-
-// Mechanical design: a blueprint with two meshing gears and a dimension line.
-const MachineArt = () => (
-  <svg viewBox="0 0 120 84">
-    <rect width="120" height="84" fill="#12395f" />
-    {Array.from({ length: 15 }, (_, i) => (
-      <line key={`v${i}`} x1={i * 8 + 4} y1="0" x2={i * 8 + 4} y2="84" stroke="#ffffff" strokeOpacity="0.1" />
-    ))}
-    {Array.from({ length: 11 }, (_, i) => (
-      <line key={`h${i}`} x1="0" y1={i * 8 + 4} x2="120" y2={i * 8 + 4} stroke="#ffffff" strokeOpacity="0.1" />
-    ))}
-    <g transform="translate(44 40)">
-      <path className="gear spin" d={BIG_GEAR} fill="none" stroke="#fff" strokeWidth="1.5" strokeLinejoin="round" />
-      <circle r="6" fill="none" stroke="#fff" strokeWidth="1.5" />
-      <line x1="-30" y1="0" x2="30" y2="0" stroke="#7fc4ff" strokeDasharray="3 2" />
-    </g>
-    <g transform="translate(76 20)">
-      <path className="gear spin-back" d={SMALL_GEAR} fill="none" stroke="#7fc4ff" strokeWidth="1.5" strokeLinejoin="round" />
-      <circle r="3.5" fill="none" stroke="#7fc4ff" strokeWidth="1.5" />
-    </g>
-    <g stroke="#fff" strokeWidth="1">
-      <line x1="22" y1="74" x2="66" y2="74" />
-      <line x1="22" y1="70" x2="22" y2="78" />
-      <line x1="66" y1="70" x2="66" y2="78" />
-    </g>
-    <text x="44" y="71" fill="#fff" fontSize="7" textAnchor="middle" fontFamily="monospace">Ø44</text>
-    <rect x="84" y="50" width="28" height="24" fill="none" stroke="#fff" strokeWidth="1" />
-    <circle cx="98" cy="62" r="6" fill="none" stroke="#7fc4ff" strokeWidth="1" />
-  </svg>
-);
-
-// San Francisco: sunset over the bay, the Golden Gate Bridge and the skyline.
-const BRIDGE_HANGERS = Array.from({ length: 8 }, (_, i) => {
-  const x = 26 + i * 4;
-  const t = (x - 22) / 36;
-  return { x, y: 30 + 44 * t * (1 - t) };
-});
-const SfArt = () => (
-  <svg viewBox="0 0 120 84">
-    <defs>
-      <linearGradient id="sf-sky" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0" stopColor="#6b3fa0" />
-        <stop offset="0.55" stopColor="#f2667a" />
-        <stop offset="1" stopColor="#ffc46b" />
-      </linearGradient>
-    </defs>
-    <rect width="120" height="84" fill="url(#sf-sky)" />
-    <circle cx="80" cy="54" r="11" fill="#ffe08a" />
-    <path d="M0 60 Q14 50 30 58 T64 60 L64 64 L0 64 Z" fill="#4a2b5e" />
-    <g fill="#2a1838">
-      <rect x="84" y="46" width="6" height="18" />
-      <polygon points="97,24 94,64 100,64" />
-      <rect x="102" y="40" width="5" height="24" />
-      <rect x="108" y="32" width="6" height="32" rx="3" />
-      <rect x="115" y="48" width="5" height="16" />
-    </g>
-    <rect y="63" width="120" height="21" fill="#2b2f6b" />
-    <g stroke="#ffe08a" strokeOpacity="0.6" strokeWidth="1">
-      <line x1="72" y1="68" x2="88" y2="68" />
-      <line x1="75" y1="73" x2="85" y2="73" />
-    </g>
-    <g stroke="#c0362c" fill="none">
-      <path d="M-2 46 L22 30 Q40 52 58 30 L82 46" strokeWidth="1.2" />
-      {BRIDGE_HANGERS.map((h) => (
-        <line key={h.x} x1={h.x} y1={h.y} x2={h.x} y2="58" strokeWidth="0.6" />
-      ))}
-      <line x1="0" y1="58" x2="82" y2="58" strokeWidth="2" />
-    </g>
-    <g fill="#c0362c">
-      <rect x="20.5" y="27" width="3" height="37" />
-      <rect x="56.5" y="27" width="3" height="37" />
-    </g>
-  </svg>
-);
-
-const GOALS = [
-  { q: "Term?", a: "Summer 2028", art: <SummerArt /> },
-  { q: "Role?", a: "Mechanical design", art: <MachineArt /> },
-  { q: "Location?", a: "San Francisco", art: <SfArt /> },
+// Step 2: a sentence with three blanks. Each blank spins like a slot-machine reel and lands on
+// Isaiah's answer, one after another. Then the number of matching co-ops counts up.
+// Three options per reel. Each loop, every reel lands on a random one.
+const SLOTS = [
+  { label: "role", items: ["Robotics", "Hardware", "Design"] },
+  { label: "term", items: ["Fall 2027", "Winter 2028", "Summer 2028"] },
+  { label: "location", items: ["Seattle", "Los Angeles", "San Francisco"] },
 ];
+const MATCH_COUNT = 248; // shown when motion is off; otherwise a random count each loop
+
+// A new random answer for each reel, never the exact same set as last time.
+function pickTargets(previous: number[]): number[] {
+  while (true) {
+    const next = SLOTS.map((slot) => Math.floor(Math.random() * slot.items.length));
+    if (next.some((v, i) => v !== previous[i])) return next;
+  }
+}
+
+const GreenTick = () => (
+  <svg width="20" height="20" viewBox="0 0 20 20">
+    <circle cx="10" cy="10" r="10" fill="#1f9d55" />
+    <path d="M5.5 10.5l3 3 6-6.5" fill="none" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+);
+
+// One reel: the options repeated a few times, ending on the answer. Spinning slides the strip up to the last one.
+// Timing for one reel: it spins, stops, then flashes bright yellow. Only then does the next reel start.
+const SPIN_MS = 1300;
+const FLASH_MS = 600;
+const LOOP_PAUSE_MS = 1500; // after both check lines show, wait this long before the next loop
+
+function Slot({ items, target, spun, landed }: { items: string[]; target: number; spun: boolean; landed: boolean }) {
+  // Two full turns, then on to the chosen answer, so every spin looks like a real spin.
+  const strip = [...items, ...items, ...items.slice(0, target + 1)];
+  const last = strip.length - 1;
+  return (
+    <span className={`slot${landed ? " landed" : ""}`}>
+      <span
+        className="slot-strip"
+        style={{
+          transform: spun ? `translateY(-${last * 1.3}em)` : "none",
+          transition: spun ? `transform ${SPIN_MS}ms cubic-bezier(0.12, 0.8, 0.2, 1)` : "none",
+        }}
+      >
+        {strip.map((item, i) => (
+          <span key={i}>{item}</span>
+        ))}
+      </span>
+    </span>
+  );
+}
 
 export function GoalsDemo() {
   const ref = useRef<HTMLDivElement>(null);
   const visible = useOnScreen(ref);
-  // How many answers have popped in so far (0 to 3).
-  const [shown, setShown] = useState(() => (reducedMotion() ? GOALS.length : 0));
+  const done = reducedMotion();
+  const [spun, setSpun] = useState(() => SLOTS.map(() => done));
+  const [landed, setLanded] = useState(() => SLOTS.map(() => false));
+  const [targets, setTargets] = useState(() => SLOTS.map((slot) => slot.items.length - 1));
+  const [count, setCount] = useState(done ? MATCH_COUNT : 0);
+  const [tailored, setTailored] = useState(done);
 
   useEffect(() => {
     if (!visible || reducedMotion()) return;
     const signal = { stop: false };
+    let last = SLOTS.map(() => -1);
     (async () => {
       while (true) {
-        setShown(0);
-        await wait(700, signal);
-        for (let i = 1; i <= GOALS.length; i++) {
-          setShown(i);
-          await wait(1100, signal);
+        last = pickTargets(last);
+        const matches = 120 + Math.floor(Math.random() * 200);
+        setTargets(last);
+        setSpun(SLOTS.map(() => false));
+        setLanded(SLOTS.map(() => false));
+        setCount(0);
+        setTailored(false);
+        await wait(400, signal);
+        for (let i = 0; i < SLOTS.length; i++) {
+          setSpun((s) => s.map((v, j) => (j === i ? true : v)));
+          await wait(SPIN_MS, signal); // reel stops
+          setLanded((s) => s.map((v, j) => (j === i ? true : v)));
+          await wait(FLASH_MS, signal); // flash finishes before the next reel moves
         }
-        await wait(3200, signal);
+        for (let k = 1; k <= 20; k++) {
+          setCount(Math.round((matches * k) / 20));
+          await wait(40, signal);
+        }
+        await wait(500, signal);
+        setTailored(true);
+        await wait(LOOP_PAUSE_MS, signal);
       }
     })().catch(() => {});
     return () => {
@@ -252,25 +206,28 @@ export function GoalsDemo() {
 
   return (
     <div className="mock goals-demo" ref={ref} aria-hidden="true">
-      {GOALS.map((g, i) => (
-        <div key={g.q} className={`goal-tile${i < shown ? " on" : ""}`}>
-          <span className="goal-q">{g.q}</span>
-          <div className="goal-art">{g.art}</div>
-          <span className="goal-a">
-            <svg className="burst" viewBox="-50 -50 100 100">
-              {Array.from({ length: 10 }, (_, k) => (
-                <line key={k} x1="0" y1="-30" x2="0" y2="-44" transform={`rotate(${k * 36})`} />
-              ))}
-            </svg>
-            {g.a}
-          </span>
-        </div>
-      ))}
+      <p className="goal-sentence">
+        I want a <Slot items={SLOTS[0].items} target={targets[0]} spun={spun[0]} landed={landed[0]} /> co-op for{" "}
+        <Slot items={SLOTS[1].items} target={targets[1]} spun={spun[1]} landed={landed[1]} /> in{" "}
+        <Slot items={SLOTS[2].items} target={targets[2]} spun={spun[2]} landed={landed[2]} />
+      </p>
+      <p className={`goal-count${count > 0 ? " on" : ""}`}>
+        <GreenTick />
+        <span>
+          <strong>{count}</strong> matching co-ops found
+        </span>
+      </p>
+      <p className={`goal-count${tailored ? " on" : ""}`}>
+        <GreenTick />
+        <span>
+          A <b className="goal-bold">tailored resume</b> ready for each one
+        </span>
+      </p>
     </div>
   );
 }
 
-// Step 3: Isaiah's resume gets scanned, the arrow fills, then matching companies' logos drop in. Pure CSS, one 8s loop.
+// Step 3: Isaiah's resume gets scanned, the arrow fills, then matching companies' logos drop in. Pure CSS, one 4s loop.
 // Matched companies, shown as logos in their own brand colours (from Simple Icons, the same set the home page uses).
 const LOGO_CDN = "https://cdn.jsdelivr.net/npm/simple-icons@11.0.0/icons";
 const MATCHES = [
@@ -369,7 +326,7 @@ export function ResumeDemo() {
       </svg>
       <ul className="job-list job-logos">
         {MATCHES.map((m, i) => (
-          <li key={m.slug} style={{ animationDelay: `${i * 0.15}s` }}>
+          <li key={m.slug} style={{ animationDelay: `${i * 0.075}s` }}>
             <span
               className="job-logo"
               role="img"
