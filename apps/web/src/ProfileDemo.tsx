@@ -11,7 +11,11 @@ function useOnScreen(ref: RefObject<Element | null>): boolean {
   useEffect(() => {
     const el = ref.current;
     if (!el || typeof IntersectionObserver === "undefined") return setVisible(true);
-    const io = new IntersectionObserver(([entry]) => setVisible(entry.isIntersecting), { threshold: 0.3 });
+    // The bottom 35% of the screen does not count, so things start once the student has scrolled a bit further.
+    const io = new IntersectionObserver(([entry]) => setVisible(entry.isIntersecting), {
+      threshold: 0.3,
+      rootMargin: "0px 0px -35% 0px",
+    });
     io.observe(el);
     return () => io.disconnect();
   }, [ref]);

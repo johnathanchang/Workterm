@@ -133,14 +133,8 @@ a.btn.ghost {
   justify-content: center;
   max-width: 720px;
   margin-inline: auto;
-  padding: 24px 0 32px;
+  padding: 48px 0 32px; /* extra top space balances the button's margin, so the headline stays put */
   text-align: center;
-}
-
-.cta-note {
-  margin: 20px 0 0;
-  font-size: 0.95rem;
-  color: var(--muted);
 }
 
 .eyebrow {
@@ -295,16 +289,17 @@ form .cta::after {
   font-size: 1.15rem;
 }
 
-/* The hero button is the main call to action, so it is bigger than the others. */
+/* Hero button: compact, with a little space above it. */
 .hero .cta {
-  padding: 20px 44px;
-  border-radius: 16px;
-  font-size: 1.35rem;
+  margin-top: 24px;
+  padding: 15px 33px;
+  border-radius: 14px;
+  font-size: 1.4rem;
   box-shadow: 0 6px 0 #c99a00, 0 16px 36px -8px rgba(255, 204, 0, 0.6);
 }
 
 .hero .cta::after {
-  font-size: 1.5rem;
+  font-size: 1.6rem;
 }
 
 .card {
@@ -1934,7 +1929,7 @@ select:focus-visible {
   color: #3b0000;
 }
 
-/* "Set up your profile": three wide rows, words left and animation right. Each slides up into view. */
+/* "Set up your profile": three wide rows, words left and animation right. Each slides in from the left. */
 .step-rows {
   display: grid;
   gap: 20px;
@@ -1949,8 +1944,18 @@ select:focus-visible {
   min-height: 300px;
   padding: 36px 40px;
   opacity: 0;
-  transform: translateY(40px);
-  transition: opacity 0.7s ease-out, transform 0.7s ease-out;
+  transform: translateX(-120px); /* cards 1 and 3 start off to the left, slide in when scrolled to */
+  transition: opacity 1.4s ease-out, transform 1.6s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/* Card 2 comes from the right instead. */
+.step-row:nth-child(2) {
+  transform: translateX(120px);
+}
+
+/* While a card is off to the side, it must not make the page scroll sideways. */
+#profile {
+  overflow-x: clip;
 }
 
 .step-row.in {
@@ -1997,7 +2002,8 @@ select:focus-visible {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .step-row {
+  .step-row,
+  .step-row:nth-child(2) {
     opacity: 1;
     transform: none;
     transition: none;
