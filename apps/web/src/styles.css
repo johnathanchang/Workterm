@@ -1130,7 +1130,7 @@ select:focus-visible {
 
 /* Step 3: portrait resume, an arrow that fills left to right, then matches drop in. One 7s loop. */
 .resume-demo {
-  grid-template-columns: 76px 34px 1fr;
+  grid-template-columns: 110px 44px 1fr;
   align-items: center;
   gap: 10px;
 }
@@ -1172,7 +1172,7 @@ select:focus-visible {
 }
 
 .fill-arrow {
-  width: 34px;
+  width: 44px;
   height: auto;
 }
 
@@ -1920,4 +1920,74 @@ select:focus-visible {
 .checkout-banner.cancelled {
   background: var(--card);
   color: #3b0000;
+}
+
+/* "Set up your profile": three wide rows, words left and animation right. Each slides up into view. */
+.step-rows {
+  display: grid;
+  gap: 20px;
+  text-align: left;
+}
+
+.step-row {
+  display: grid;
+  grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
+  gap: 40px;
+  align-items: center;
+  min-height: 300px;
+  padding: 36px 40px;
+  opacity: 0;
+  transform: translateY(40px);
+  transition: opacity 0.7s ease-out, transform 0.7s ease-out;
+}
+
+.step-row.in {
+  opacity: 1;
+  transform: none;
+}
+
+.step-row h3 {
+  font-size: clamp(1.6rem, 3vw, 2.3rem);
+}
+
+.step-copy > p {
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
+.step-demo .mock {
+  margin-top: 0;
+}
+
+.step-demo .type-field,
+.step-demo .goals-demo {
+  max-width: 460px;
+}
+
+/* The resume loop waits until the row is on screen, so it starts from the beginning. */
+.resume-demo:not(.play) .fill-arrow-bar,
+.resume-demo:not(.play) .job-list li {
+  animation-play-state: paused;
+}
+
+@media (max-width: 860px) {
+  .step-row {
+    grid-template-columns: 1fr;
+    gap: 22px;
+    min-height: 0;
+    padding: 24px 20px;
+  }
+
+  .resume-demo {
+    grid-template-columns: 80px 34px 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .step-row {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
 }

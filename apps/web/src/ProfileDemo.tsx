@@ -1,6 +1,6 @@
 // "Set up your profile" mock-ups on the home page. Small looping animations, not real data.
 // Each one only runs while it is on screen, and shows its finished state when the visitor prefers less motion.
-import { useEffect, useRef, useState, type RefObject } from "react";
+import { useEffect, useRef, useState, type ReactNode, type RefObject } from "react";
 
 const reducedMotion = () =>
   typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
@@ -16,6 +16,27 @@ function useOnScreen(ref: RefObject<Element | null>): boolean {
     return () => io.disconnect();
   }, [ref]);
   return visible;
+}
+
+// A wide card for one step: words on one side, the animation on the other.
+// It slides in the first time it scrolls into view, then stays.
+export function StepRow({ step, title, text, children }: { step: number; title: string; text: string; children: ReactNode }) {
+  const ref = useRef<HTMLElement>(null);
+  const visible = useOnScreen(ref);
+  const [shown, setShown] = useState(false);
+  useEffect(() => {
+    if (visible) setShown(true);
+  }, [visible]);
+  return (
+    <article ref={ref} className={`show-card step-row${shown ? " in" : ""}`}>
+      <div className="step-copy">
+        <span className="step">Step {step}</span>
+        <h3>{title}</h3>
+        <p>{text}</p>
+      </div>
+      <div className="step-demo">{children}</div>
+    </article>
+  );
 }
 
 const wait = (ms: number, signal: { stop: boolean }) =>
@@ -190,8 +211,10 @@ const JOBS = [
 ];
 
 export function ResumeDemo() {
+  const ref = useRef<HTMLDivElement>(null);
+  const visible = useOnScreen(ref);
   return (
-    <div className="mock resume-demo" aria-hidden="true">
+    <div className={`mock resume-demo${visible ? " play" : ""}`} ref={ref} aria-hidden="true">
       <div className="resume-page">
         <b className="r-name" />
         <b className="r-sub" />

@@ -1,5 +1,5 @@
 // Showcase sections on the home page. The cards hold small mock-ups of the product, not real data.
-import { GoalsDemo, ResumeDemo, TypingDemo } from "./ProfileDemo";
+import { GoalsDemo, ResumeDemo, StepRow, TypingDemo } from "./ProfileDemo";
 
 // Resume score rising as Workterm tailors it. Heights are percentages of the chart.
 const SCORE_BARS = [22, 26, 29, 33, 37, 42, 46, 52, 57, 63, 68, 74, 80, 86, 93];
@@ -124,27 +124,17 @@ export function CreateProfile() {
       <h2 id="profile-title">Set up your profile.</h2>
       <p className="showcase-sub">It takes a few minutes. You can change anything later.</p>
 
-      <div className="show-grid">
-        <article className="show-card">
-          <span className="step">Step 1</span>
-          <h3>Create an account</h3>
-          <p>Start with the basics: your name, your school and your program.</p>
+      {/* Three wide rows, one per step. Each slides in and starts its animation as you scroll to it. */}
+      <div className="step-rows">
+        <StepRow step={1} title="Create an account" text="Start with the basics: your name, your school and your program.">
           <TypingDemo />
-        </article>
-
-        <article className="show-card">
-          <span className="step">Step 2</span>
-          <h3>Pick your goals</h3>
-          <p>A few quick questions about your term, the roles you want and where you want to work.</p>
+        </StepRow>
+        <StepRow step={2} title="Pick your goals" text="A few quick questions about your term, the roles you want and where you want to work.">
           <GoalsDemo />
-        </article>
-
-        <article className="show-card">
-          <span className="step">Step 3</span>
-          <h3>Add your resume</h3>
-          <p>Upload a PDF. We read it and show the co-ops that fit you best.</p>
+        </StepRow>
+        <StepRow step={3} title="Add your resume" text="Upload a PDF. We read it and show the co-ops that fit you best.">
           <ResumeDemo />
-        </article>
+        </StepRow>
       </div>
 
       <StartButton />
