@@ -6,11 +6,14 @@ interface Env {
   WEB_ORIGIN: string;
   // Secrets. Locally, put them in apps/api/.dev.vars (gitignored). Test mode keys only for now.
   STRIPE_SECRET_KEY?: string;
-  STRIPE_PRICE_ID?: string; // the one-time "co-op term" price, created in the Stripe dashboard
-  STRIPE_WEBHOOK_SECRET?: string; // "whsec_..." from the Stripe webhook endpoint settings
+  STRIPE_PRICE_MONTHLY?: string; // "price_..." for the Monthly Plan ($25 a month)
+  STRIPE_PRICE_TERM?: string; // "price_..." for the Term Plan ($45 every 4 months)
+  STRIPE_WEBHOOK_SECRET?: string; // "whsec_..." from `stripe listen` or the webhook endpoint settings
 }
 
-const TERM_MS = 120 * 24 * 60 * 60 * 1000; // one co-op term, about four months
+type Plan = "monthly" | "term";
+// Stripe subscription statuses that unlock Pro. Anything else (past_due, canceled, unpaid…) does not.
+const ACTIVE_STATUSES = new Set(["active", "trialing"]);
 const WEBHOOK_TOLERANCE_SECONDS = 300; // reject messages older than 5 minutes (replay protection)
 
 const MAX_BODY_BYTES = 2_000;
@@ -119,10 +122,11 @@ async function logEvent(request: Request, env: Env): Promise<Response> {
   return Response.json({ ok: true }, { status: 201 });
 }
 
-// Creates a Stripe Checkout page for one co-op term and returns its URL.
+// Creates a Stripe Checkout page for a subscription (decision 0005) and returns its URL.
 // Plain fetch to Stripe's REST API, so no new dependency. The secret key stays on the server.
 async function startCheckout(request: Request, env: Env): Promise<Response> {
-  if (!env.STRIPE_SECRET_KEY || !env.STRIPE_PRICE_ID) {
+  const prices: Record<Plan, string | undefined> = { monthly: env.STRIPE_PRICE_MONTHLY, term: env.STRIPE_PRICE_TERM };
+  if (!env.STRIPE_SECRET_KEY || !prices.monthly || !prices.term) {
     return Response.json({ error: "payments_not_configured" }, { status: 503 });
   }
   const body = await readJson(request);
@@ -130,13 +134,20 @@ async function startCheckout(request: Request, env: Env): Promise<Response> {
   if (!email || !EMAIL_PATTERN.test(email)) {
     return Response.json({ error: "invalid_email" }, { status: 400 });
   }
+  const plan = body?.plan;
+  if (plan !== "monthly" && plan !== "term") {
+    return Response.json({ error: "invalid_plan" }, { status: 400 });
+  }
 
   const form = new URLSearchParams({
-    mode: "payment", // one-time payment per term (decision 0002), not a subscription
-    "line_items[0][price]": env.STRIPE_PRICE_ID,
+    mode: "subscription", // renews automatically until the student cancels
+    "line_items[0][price]": prices[plan]!,
     "line_items[0][quantity]": "1",
     customer_email: email,
     client_reference_id: email,
+    // Copied onto the subscription, so every later subscription event says whose it is.
+    "subscription_data[metadata][email]": email,
+    "subscription_data[metadata][plan]": plan,
     success_url: `${env.WEB_ORIGIN}/?checkout=success#/`,
     cancel_url: `${env.WEB_ORIGIN}/?checkout=cancelled#/signup`,
   });
@@ -149,20 +160,18 @@ async function startCheckout(request: Request, env: Env): Promise<Response> {
     body: form,
   });
   if (!stripeRes.ok) {
-    console.error("stripe_checkout_failed", stripeRes.status);
+    console.error("stripe_checkout_failed", stripeRes.status, await stripeRes.text());
     return Response.json({ error: "checkout_failed" }, { status: 502 });
   }
   const session = (await stripeRes.json()) as { id?: string; url?: string };
   if (!session.url) return Response.json({ error: "checkout_failed" }, { status: 502 });
 
-  await env.DB
-    .prepare("INSERT INTO events (id, name, source, created_at) VALUES (?, ?, ?, ?)")
-    .bind(crypto.randomUUID(), "checkout_started", "api", Date.now())
-    .run();
+  await logServerEvent(env, "checkout_started", plan);
   return Response.json({ url: session.url });
 }
 
-// Stripe calls this after a payment. The only thing that can create an entitlement.
+// Stripe calls this when a subscription starts, renews, changes or ends.
+// The only thing that writes entitlements.
 async function stripeWebhook(request: Request, env: Env): Promise<Response> {
   if (!env.STRIPE_WEBHOOK_SECRET) {
     return Response.json({ error: "payments_not_configured" }, { status: 503 });
@@ -172,36 +181,62 @@ async function stripeWebhook(request: Request, env: Env): Promise<Response> {
   const valid = await verifyStripeSignature(raw, request.headers.get("Stripe-Signature"), env.STRIPE_WEBHOOK_SECRET);
   if (!valid) return Response.json({ error: "bad_signature" }, { status: 400 });
 
-  let event: { type?: string; data?: { object?: Record<string, unknown> } };
+  let event: { type?: string; created?: number; data?: { object?: Record<string, any> } };
   try {
     event = JSON.parse(raw);
   } catch {
     return Response.json({ error: "bad_request" }, { status: 400 });
   }
 
-  if (event.type === "checkout.session.completed") {
-    const session = event.data?.object ?? {};
-    const email = cleanText(session.customer_email ?? session.client_reference_id, 254)?.toLowerCase();
-    const sessionId = cleanText(session.id, 255);
-    if (session.payment_status === "paid" && email && sessionId) {
-      const now = Date.now();
-      // UNIQUE stripe_session_id: a repeated webhook changes nothing.
-      const result = await env.DB
-        .prepare(
-          "INSERT INTO entitlements (id, email, plan, status, source, stripe_session_id, starts_at, expires_at, created_at) VALUES (?, ?, 'term', 'active', 'stripe', ?, ?, ?, ?) ON CONFLICT(stripe_session_id) DO NOTHING",
-        )
-        .bind(crypto.randomUUID(), email, sessionId, now, now + TERM_MS, now)
-        .run();
-      if ((result.meta.changes ?? 0) > 0) {
-        await env.DB
-          .prepare("INSERT INTO events (id, name, source, created_at) VALUES (?, ?, ?, ?)")
-          .bind(crypto.randomUUID(), "payment_succeeded", "stripe", now)
-          .run();
-      }
-    }
+  if (event.type?.startsWith("customer.subscription.")) {
+    await syncSubscription(env, event.data?.object ?? {}, (event.created ?? 0) * 1000);
   }
   // Always answer 200 for valid messages, even ones we ignore, so Stripe stops retrying.
   return Response.json({ received: true });
+}
+
+// One entitlement row per Stripe subscription. Each event carries the whole subscription,
+// so we just copy its latest state. Events can arrive twice or out of order:
+// a row only changes if the event is at least as new as the last one applied.
+async function syncSubscription(env: Env, sub: Record<string, any>, eventAt: number): Promise<void> {
+  const subId = cleanText(sub.id, 255);
+  const email = cleanText(sub.metadata?.email, 254)?.toLowerCase();
+  const plan: Plan = sub.metadata?.plan === "monthly" ? "monthly" : "term";
+  // Newer Stripe API versions keep the period end on the subscription item instead.
+  const periodEnd = Number(sub.current_period_end ?? sub.items?.data?.[0]?.current_period_end);
+  if (!subId || !email || !Number.isFinite(periodEnd)) return;
+
+  const status = ACTIVE_STATUSES.has(sub.status) ? "active" : "expired";
+  const now = Date.now();
+  const existing = await env.DB
+    .prepare("SELECT status FROM entitlements WHERE stripe_subscription_id = ?")
+    .bind(subId)
+    .first<{ status: string }>();
+
+  const result = await env.DB
+    .prepare(
+      `INSERT INTO entitlements
+         (id, email, plan, status, source, stripe_subscription_id, stripe_customer_id, starts_at, expires_at, last_event_at, created_at)
+       VALUES (?, ?, ?, ?, 'stripe', ?, ?, ?, ?, ?, ?)
+       ON CONFLICT(stripe_subscription_id) DO UPDATE SET
+         plan = excluded.plan, status = excluded.status, expires_at = excluded.expires_at, last_event_at = excluded.last_event_at
+       WHERE excluded.last_event_at >= entitlements.last_event_at`,
+    )
+    .bind(crypto.randomUUID(), email, plan, status, subId, cleanText(sub.customer, 255), now, periodEnd * 1000, eventAt, now)
+    .run();
+
+  // Key events: the first time a subscription becomes active, and when it ends.
+  // Only when this event actually changed the row (not a repeat, not a stale one).
+  if ((result.meta.changes ?? 0) === 0) return;
+  if (status === "active" && existing?.status !== "active") await logServerEvent(env, "subscription_started", plan);
+  if (status === "expired" && existing?.status === "active") await logServerEvent(env, "subscription_ended", plan);
+}
+
+async function logServerEvent(env: Env, name: string, source: string): Promise<void> {
+  await env.DB
+    .prepare("INSERT INTO events (id, name, source, created_at) VALUES (?, ?, ?, ?)")
+    .bind(crypto.randomUUID(), name, source, Date.now())
+    .run();
 }
 
 // Header looks like "t=1700000000,v1=abcdef...". v1 = HMAC-SHA256 of "t.rawBody" with the secret.

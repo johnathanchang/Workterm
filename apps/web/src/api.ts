@@ -27,13 +27,13 @@ export async function joinWaitlist(input: {
 
 export type CheckoutResult = { url: string } | { error: "invalid_email" | "not_configured" | "error" };
 
-// Asks the API for a Stripe Checkout page. The browser never sees a Stripe key.
-export async function startCheckout(email: string): Promise<CheckoutResult> {
+// Asks the API for a Stripe Checkout page for a subscription. The browser never sees a Stripe key.
+export async function startCheckout(email: string, plan: "monthly" | "term"): Promise<CheckoutResult> {
   try {
     const res = await fetch(`${BASE}/checkout`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email }),
+      body: JSON.stringify({ email, plan }),
     });
     if (res.status === 400) return { error: "invalid_email" };
     if (res.status === 503) return { error: "not_configured" };

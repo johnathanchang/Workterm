@@ -101,7 +101,7 @@ export default function Onboarding() {
   // "Edit" on the summary sends the student to one screen, then straight back to the summary.
   const [returnTo, setReturnTo] = useState<Step | null>(null);
   const [found, setFound] = useState(0);
-  const [plan, setPlan] = useState<"free" | "pro">("pro");
+  const [plan, setPlan] = useState<"monthly" | "term">("term");
   // No sign-in yet, so Stripe needs an email for the receipt and the entitlement.
   const [payEmail, setPayEmail] = useState("");
   const [paying, setPaying] = useState(false);
@@ -503,11 +503,10 @@ export default function Onboarding() {
             className="stack"
             onSubmit={async (e) => {
               e.preventDefault();
-              if (plan === "free") return go("done");
               track("trial_start_click");
               setPaying(true);
               setPayError("");
-              const result = await startCheckout(payEmail);
+              const result = await startCheckout(payEmail, plan);
               if ("url" in result) {
                 window.location.href = result.url; // off to Stripe's payment page
                 return;
@@ -517,58 +516,55 @@ export default function Onboarding() {
                 result.error === "invalid_email"
                   ? "Please enter a valid email."
                   : result.error === "not_configured"
-                    ? "Payments are not set up yet. Try Free for now."
+                    ? "Payments are not set up yet. Please try again later."
                     : "Something went wrong. Please try again.",
               );
             }}
           >
             <h1 className="authtitle">Choose your plan</h1>
-            <p className="lead small">Start free. Pay once for a co-op term when you are ready to apply to more firms.</p>
+            <p className="lead small">Pick how you want to pay. Both plans include everything.</p>
             <div className="plans" role="radiogroup" aria-label="Plans">
-              <label className={plan === "pro" ? "plan on" : "plan"}>
-                <input type="radio" name="plan" checked={plan === "pro"} onChange={() => setPlan("pro")} />
+              <label className={plan === "term" ? "plan on" : "plan"}>
+                <input type="radio" name="plan" checked={plan === "term"} onChange={() => setPlan("term")} />
                 <span className="plan-head">
-                  <strong>Pro</strong>
-                  <span className="pill gold">One payment</span>
+                  <strong>Pro – Term</strong>
+                  <span className="pill gold">Best value</span>
                 </span>
                 <span className="plan-price">
-                  $35 <small>per co-op term</small>
+                  $45 <small>every 4 months, about one co-op term</small>
                 </span>
                 <ul>
-                  <li>Everything in Free</li>
+                  <li>See your matches and rate your resume</li>
                   <li>A tailored resume for every job</li>
                   <li>Emails sent from your Gmail, after you approve</li>
                   <li>Follow-ups and reply tracking</li>
                 </ul>
               </label>
-              <label className={plan === "free" ? "plan on" : "plan"}>
-                <input type="radio" name="plan" checked={plan === "free"} onChange={() => setPlan("free")} />
+              <label className={plan === "monthly" ? "plan on" : "plan"}>
+                <input type="radio" name="plan" checked={plan === "monthly"} onChange={() => setPlan("monthly")} />
                 <span className="plan-head">
-                  <strong>Free</strong>
+                  <strong>Pro – Monthly</strong>
                 </span>
                 <span className="plan-price">
-                  $0 <small>forever</small>
+                  $25 <small>a month</small>
                 </span>
                 <ul>
-                  <li>See your matches</li>
-                  <li>Rate your resume</li>
-                  <li>Send 5 emails</li>
+                  <li>Everything in Pro – Term</li>
+                  <li>Pay month by month</li>
                 </ul>
               </label>
             </div>
-            {plan === "pro" && (
-              <label>
-                Email for your receipt
-                <input
-                  type="email"
-                  required
-                  autoComplete="email"
-                  value={payEmail}
-                  onChange={(e) => setPayEmail(e.target.value)}
-                  placeholder="you@school.ca"
-                />
-              </label>
-            )}
+            <label>
+              Email for your receipt
+              <input
+                type="email"
+                required
+                autoComplete="email"
+                value={payEmail}
+                onChange={(e) => setPayEmail(e.target.value)}
+                placeholder="you@school.ca"
+              />
+            </label>
             {payError && (
               <p className="error" role="alert">
                 {payError}
@@ -576,10 +572,13 @@ export default function Onboarding() {
             )}
             <Nav
               back={() => history.back()}
-              next={plan === "free" ? "Continue with Free" : paying ? "Opening checkout…" : "Continue to payment"}
+              next={paying ? "Opening checkout…" : "Continue to payment"}
               disabled={paying}
             />
-            <p className="fine center">One payment per term, not a subscription. Payment is handled by Stripe. We cannot promise a placement.</p>
+            <p className="fine center">
+              Renews automatically every {plan === "term" ? "4 months" : "month"} until you cancel. Cancel anytime. Payment is
+              handled by Stripe. We cannot promise a placement.
+            </p>
           </form>
         )}
 
@@ -619,7 +618,7 @@ export default function Onboarding() {
                 </button>
               </li>
               <li>
-                <span>Plan</span> {plan === "pro" ? "Pro" : "Free"}
+                <span>Plan</span> {plan === "term" ? "Pro – Term" : "Pro – Monthly"}
                 <button type="button" className="linkish edit" onClick={() => edit("plans")} aria-label="Edit plan">
                   Edit
                 </button>

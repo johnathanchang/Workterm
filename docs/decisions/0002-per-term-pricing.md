@@ -1,6 +1,6 @@
 # 0002 – Per-term pricing, not $30 a year
 
-Status: accepted
+Status: replaced by 0005 (subscriptions)
 
 ## Decision
 

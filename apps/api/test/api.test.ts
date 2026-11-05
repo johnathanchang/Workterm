@@ -14,7 +14,9 @@ beforeAll(async () => {
   const proxy = await getPlatformProxy({ configPath: join(api, "wrangler.jsonc"), persist: false });
   env = proxy.env;
   dispose = proxy.dispose;
-  for (const file of ["0001_waitlist.sql", "0002_entitlements.sql"]) {
+  // Tests never use the real keys in .dev.vars. Each Stripe test sets fake ones and mocks fetch.
+  for (const k of Object.keys(env)) if (k.startsWith("STRIPE_")) delete env[k];
+  for (const file of ["0001_waitlist.sql", "0002_entitlements.sql", "0003_subscriptions.sql"]) {
     const sql = await Bun.file(join(api, "migrations", file)).text();
     // exec wants one statement per line, so strip comments and put each statement on its own line.
     await env.DB.exec(sql.replace(/--.*$/gm, "").replace(/\s+/g, " ").replace(/; /g, ";\n"));
@@ -63,12 +65,11 @@ test("unknown route is 404", async () => {
 });
 
 test("checkout returns 503 when Stripe keys are missing", async () => {
-  expect((await post("/checkout", { email: "a@b.ca" })).status).toBe(503);
+  expect((await post("/checkout", { email: "a@b.ca", plan: "term" })).status).toBe(503);
 });
 
-test("checkout creates a Stripe session and logs an event", async () => {
-  env.STRIPE_SECRET_KEY = "sk_test_fake";
-  env.STRIPE_PRICE_ID = "price_fake";
+test("checkout creates a subscription session for the chosen plan", async () => {
+  Object.assign(env, { STRIPE_SECRET_KEY: "sk_test_fake", STRIPE_PRICE_MONTHLY: "price_month", STRIPE_PRICE_TERM: "price_term" });
   const realFetch = globalThis.fetch;
   let sent: { url: string; body: string; auth: string | null } | null = null;
   globalThis.fetch = (async (input: any, init: any) => {
@@ -76,20 +77,27 @@ test("checkout creates a Stripe session and logs an event", async () => {
     return Response.json({ id: "cs_test_1", url: "https://checkout.stripe.com/c/pay/cs_test_1" });
   }) as any;
   try {
-    expect((await post("/checkout", { email: "nope" })).status).toBe(400);
-    const res = await post("/checkout", { email: "Student@Mac.CA" });
+    expect((await post("/checkout", { email: "nope", plan: "term" })).status).toBe(400);
+    expect((await post("/checkout", { email: "a@b.ca", plan: "yearly" })).status).toBe(400);
+
+    const res = await post("/checkout", { email: "Student@Mac.CA", plan: "monthly" });
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ url: "https://checkout.stripe.com/c/pay/cs_test_1" });
+    const form = new URLSearchParams(sent!.body);
     expect(sent!.url).toBe("https://api.stripe.com/v1/checkout/sessions");
     expect(sent!.auth).toBe("Bearer sk_test_fake");
-    expect(sent!.body).toContain("mode=payment");
-    expect(sent!.body).toContain("student%40mac.ca");
+    expect(form.get("mode")).toBe("subscription");
+    expect(form.get("line_items[0][price]")).toBe("price_month");
+    expect(form.get("subscription_data[metadata][email]")).toBe("student@mac.ca");
+
+    await post("/checkout", { email: "a@b.ca", plan: "term" });
+    expect(new URLSearchParams(sent!.body).get("line_items[0][price]")).toBe("price_term");
+
     const row = await env.DB.prepare("SELECT COUNT(*) AS n FROM events WHERE name = 'checkout_started'").first();
-    expect(row.n).toBe(1);
+    expect(row.n).toBe(2);
   } finally {
     globalThis.fetch = realFetch;
-    delete env.STRIPE_SECRET_KEY;
-    delete env.STRIPE_PRICE_ID;
+    for (const k of ["STRIPE_SECRET_KEY", "STRIPE_PRICE_MONTHLY", "STRIPE_PRICE_TERM"]) delete env[k];
   }
 });
 
@@ -102,42 +110,53 @@ async function signedWebhook(payload: object, secret: string, timestamp = Math.f
   return call("/webhooks/stripe", { method: "POST", headers: { "Stripe-Signature": `t=${timestamp},v1=${sig}` }, body: raw });
 }
 
-const paid = { type: "checkout.session.completed", data: { object: { id: "cs_test_9", customer_email: "Paid@Mac.ca", payment_status: "paid" } } };
+// A subscription event as Stripe sends it. created is the event time in seconds.
+const inAMonth = Math.floor(Date.now() / 1000) + 30 * 86400;
+const subEvent = (type: string, status: string, created: number, email = "Paid@Mac.ca", id = "sub_1") => ({
+  type: `customer.subscription.${type}`,
+  created,
+  data: { object: { id, customer: "cus_1", status, metadata: { email, plan: "monthly" }, items: { data: [{ current_period_end: inAMonth }] } } },
+});
+const pro = async (email: string) => (await (await call(`/me/entitlements?email=${email}`)).json()) as any;
 
-test("webhook unlocks Pro once, even if Stripe repeats it", async () => {
+test("subscription unlocks Pro, repeats are harmless, cancel locks it again", async () => {
   env.STRIPE_WEBHOOK_SECRET = "whsec_test";
   try {
-    const before = await call("/me/entitlements?email=paid@mac.ca");
-    expect((await before.json()).pro).toBe(false);
+    expect((await pro("paid@mac.ca")).pro).toBe(false);
 
-    expect((await signedWebhook(paid, "whsec_test")).status).toBe(200);
-    expect((await signedWebhook(paid, "whsec_test")).status).toBe(200); // repeat
-
+    expect((await signedWebhook(subEvent("created", "active", 100), "whsec_test")).status).toBe(200);
+    expect((await signedWebhook(subEvent("created", "active", 100), "whsec_test")).status).toBe(200); // repeat
     const rows = await env.DB.prepare("SELECT COUNT(*) AS n FROM entitlements WHERE email = 'paid@mac.ca'").first();
     expect(rows.n).toBe(1);
-    const events = await env.DB.prepare("SELECT COUNT(*) AS n FROM events WHERE name = 'payment_succeeded'").first();
-    expect(events.n).toBe(1);
-
-    const after = await (await call("/me/entitlements?email=paid@mac.ca")).json();
+    const after = await pro("paid@mac.ca");
     expect(after.pro).toBe(true);
-    expect(after.plan).toBe("term");
+    expect(after.plan).toBe("monthly");
+    expect(after.expires_at).toBe(inAMonth * 1000);
+
+    // An older event arriving late must not undo a newer one.
+    await signedWebhook(subEvent("deleted", "canceled", 300), "whsec_test");
+    await signedWebhook(subEvent("updated", "active", 200), "whsec_test");
+    expect((await pro("paid@mac.ca")).pro).toBe(false);
+
+    const started = await env.DB.prepare("SELECT COUNT(*) AS n FROM events WHERE name = 'subscription_started'").first();
+    const ended = await env.DB.prepare("SELECT COUNT(*) AS n FROM events WHERE name = 'subscription_ended'").first();
+    expect([started.n, ended.n]).toEqual([1, 1]);
   } finally {
     delete env.STRIPE_WEBHOOK_SECRET;
   }
 });
 
-test("webhook rejects bad, missing, and stale signatures, and unpaid sessions grant nothing", async () => {
+test("webhook rejects bad, missing, and stale signatures; unpaid subscriptions grant nothing", async () => {
   env.STRIPE_WEBHOOK_SECRET = "whsec_test";
   try {
-    const other = { ...paid, data: { object: { ...paid.data.object, id: "cs_test_10", customer_email: "evil@mac.ca" } } };
-    expect((await signedWebhook(other, "wrong_secret")).status).toBe(400);
-    expect((await call("/webhooks/stripe", { method: "POST", body: JSON.stringify(other) })).status).toBe(400);
-    expect((await signedWebhook(other, "whsec_test", Math.floor(Date.now() / 1000) - 3600)).status).toBe(400);
+    const evil = subEvent("created", "active", 100, "evil@mac.ca", "sub_2");
+    expect((await signedWebhook(evil, "wrong_secret")).status).toBe(400);
+    expect((await call("/webhooks/stripe", { method: "POST", body: JSON.stringify(evil) })).status).toBe(400);
+    expect((await signedWebhook(evil, "whsec_test", Math.floor(Date.now() / 1000) - 3600)).status).toBe(400);
+    expect((await pro("evil@mac.ca")).pro).toBe(false);
 
-    const unpaid = { ...other, data: { object: { ...other.data.object, payment_status: "unpaid" } } };
-    expect((await signedWebhook(unpaid, "whsec_test")).status).toBe(200);
-    const body = await (await call("/me/entitlements?email=evil@mac.ca")).json();
-    expect(body.pro).toBe(false);
+    await signedWebhook(subEvent("created", "incomplete", 100, "late@mac.ca", "sub_3"), "whsec_test");
+    expect((await pro("late@mac.ca")).pro).toBe(false);
   } finally {
     delete env.STRIPE_WEBHOOK_SECRET;
   }
