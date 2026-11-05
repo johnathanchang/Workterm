@@ -1024,7 +1024,29 @@ select:focus-visible {
 
 /* Step 1: fields fill in as if typed. The focused field gets a cardinal outline and a blinking caret. */
 .type-field {
+  position: relative;
+  padding-right: 38px; /* room for the tick */
   transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+/* Green tick on the right once a line is fully typed. */
+.field-done {
+  position: absolute;
+  top: 50%;
+  right: 12px;
+  margin-top: -10px;
+  animation: tick-pop 0.35s cubic-bezier(0.3, 1.6, 0.5, 1) both;
+}
+
+@keyframes tick-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.3);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 
 .type-field.focus {
@@ -1330,6 +1352,7 @@ select:focus-visible {
 @media (prefers-reduced-motion: reduce) {
   .fill-arrow-bar,
   .job-list li,
+  .field-done,
   .caret {
     animation: none;
   }

@@ -23,8 +23,8 @@ const wait = (ms: number, signal: { stop: boolean }) =>
 
 // Step 1: name, school and program are typed in, one line after another.
 const FIELDS = [
-  { label: "Name", value: "Kemba Mohammed" },
-  { label: "School", value: "University of Waterloo" },
+  { label: "Name", value: "Isaiah Walter" },
+  { label: "School", value: "UC Berkeley" },
   { label: "Program", value: "Computer Science" },
 ];
 
@@ -70,6 +70,13 @@ export function TypingDemo() {
             {typed[i] || " "}
             {active === i && <i className="caret" />}
           </strong>
+          {/* Green tick once the line is fully typed. */}
+          {typed[i] === f.value && (
+            <svg className="field-done" width="20" height="20" viewBox="0 0 20 20">
+              <circle cx="10" cy="10" r="10" fill="#1f9d55" />
+              <path d="M5.5 10.5l3 3 6-6.5" fill="none" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          )}
         </div>
       ))}
     </div>
@@ -80,9 +87,9 @@ export function TypingDemo() {
 const GROUPS = [
   { label: "Term", chips: ["Summer 2027", "Fall 2027"] },
   { label: "Roles", chips: ["Software", "Data", "Product"] },
-  { label: "Location", chips: ["Toronto", "Waterloo", "Remote"] },
+  { label: "Location", chips: ["New York", "San Francisco"] },
 ];
-const CLICKS = ["Summer 2027", "Software", "Data", "Toronto", "Remote"];
+const CLICKS = ["Summer 2027", "Software", "Data", "New York", "San Francisco"];
 
 const Tick = () => (
   <svg width="11" height="11" viewBox="0 0 16 16" aria-hidden="true">
