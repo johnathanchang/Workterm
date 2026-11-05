@@ -18,7 +18,7 @@ const StartButton = () => (
       className="cta"
       onClick={() => document.getElementById("early-access")?.scrollIntoView({ behavior: "smooth" })}
     >
-      Start for free
+      Get started
     </button>
   </div>
 );
@@ -155,7 +155,7 @@ const ROWS: { label: string; cells: Cell[]; price?: boolean }[] = [
   {
     label: "Price",
     price: true,
-    cells: [{ main: "$20 a month" }, "Free", "$20 a month", "$39.99 a month"],
+    cells: [{ main: "$25 a month", sub: "or $45 per term" }, "Free", "$20 a month", "$39.99 a month"],
   },
 ];
 

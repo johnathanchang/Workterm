@@ -149,7 +149,7 @@ export default function Competitor({ slug }: { slug: string }) {
           placement.
         </p>
         <p className="fine center">
-          <a href="#/signup">Start for free</a> · <a href="#/">Back to home</a>
+          <a href="#/signup">Get started</a> · <a href="#/">Back to home</a>
         </p>
       </article>
     </main>

@@ -48,7 +48,7 @@ Offerloop and Whali target big companies (banking, consulting, tech). We cover a
 
 ## Pricing
 
-- Free: see matches plus 5 emails.
+- No free plan. Students see their matched firms during onboarding (the aha moment), then pick a paid plan.
 - Paid: a subscription, $25 a month or $45 every 4 months (one co-op term).
 - Why: see `docs/decisions/0005-subscriptions.md` (replaces the per-term payment in 0002).
 

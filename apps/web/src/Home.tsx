@@ -75,7 +75,7 @@ export default function Home() {
   }, []);
 
   // The first scroll down from the top jumps straight to "How it works". It re-arms when you return to the top.
-  // It listens to the wheel, touch and keys, so scrolls started by buttons (like "Start for free") are left alone.
+  // It listens to the wheel, touch and keys, so scrolls started by buttons (like "Get started") are left alone.
   useEffect(() => {
     let armed = true;
     let touchY = 0;
@@ -137,9 +137,9 @@ export default function Home() {
               className="cta"
               onClick={() => document.getElementById("early-access")?.scrollIntoView({ behavior: "smooth" })}
             >
-              Start for free
+              Get started
             </button>
-            <p className="cta-note">Start with a free trial. Cancel anytime.</p>
+            <p className="cta-note">From $25 a month. Cancel anytime.</p>
           </section>
 
           <section className="logos" aria-label="Companies you can target">

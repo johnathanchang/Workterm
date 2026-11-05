@@ -9,7 +9,7 @@ Pro is a recurring Stripe subscription with two plans:
 - **Pro – Monthly:** $25 a month.
 - **Pro – Term:** $45 every 4 months, about one co-op term. Shown first as the best value.
 
-Free stays the same: see matches, rate your resume, send 5 emails.
+No free plan (decided Nov 5, 2026). Students still see their matched firms during onboarding, before the paywall.
 
 ## Why
 
