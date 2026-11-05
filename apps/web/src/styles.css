@@ -1123,7 +1123,7 @@ select:focus-visible {
 
 /* A bright yellow flash with a glow once a reel has stopped (same yellow as the card 3 scanner). */
 .slot.landed {
-  animation: slot-land 0.6s ease-out;
+  animation: slot-land 0.375s ease-out;
 }
 
 @keyframes slot-land {
@@ -1146,34 +1146,51 @@ select:focus-visible {
   margin: 0;
   font-size: 0.95rem;
   color: var(--muted);
-  opacity: 0;
-  transform: translateY(6px);
-  transition: opacity 0.3s, transform 0.3s;
 }
 
-.goal-count.on {
-  opacity: 1;
-  transform: none;
+/* Both blanks have a green underline, like a fill-in-the-blank. The number's text is invisible
+   until the reels are done, then fades in on top of its line. */
+.goal-count strong,
+.goal-type {
+  border-bottom: 2px solid #0b5e2f; /* dark green */
+  line-height: 1.05; /* tight box, so the line sits just under the letters */
 }
 
-/* "tailored resume": a black underline that draws itself left to right once the line appears. */
-.goal-bold {
-  padding-bottom: 2px;
-  background: linear-gradient(#000, #000) left bottom / 0% 2px no-repeat;
+.goal-count strong {
+  color: transparent;
+}
+
+.goal-count strong.shown {
+  color: #3b0000;
+  transition: color 0.3s;
+}
+
+/* "tailored resume" types itself in. The invisible full words underneath hold the width. */
+.goal-type {
+  display: inline-grid;
   color: #3b0000;
   font-weight: 800;
-  transition: background-size 0.6s ease-out 0.3s;
 }
 
-.goal-count.on .goal-bold {
-  background-size: 100% 2px;
+.goal-type > span {
+  grid-area: 1 / 1;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.goal-type-ghost {
+  visibility: hidden;
+}
+
+/* The cursor takes no width, so the line stays perfectly still while typing. */
+.goal-type .caret {
+  margin-right: -3px;
 }
 
 .goal-count strong {
   display: inline-block;
-  width: 3ch; /* room for 3 digits, so the line does not jiggle while counting */
-  text-align: right;
-  color: #3b0000;
+  width: 3.4ch; /* room for 3 digits, so the line does not jiggle while counting */
+  text-align: center;
   font-size: 1.1rem;
   font-variant-numeric: tabular-nums;
 }
@@ -1269,8 +1286,8 @@ select:focus-visible {
   animation: job-in 4s ease-out infinite both;
 }
 
-/* Matches: a 2 x 2 grid of company logos, each in its own brand colour. */
-/* Four logos close together in a 2 x 2 grid of small squares. */
+/* Matches: four company logos close together in a 2 x 2 grid of small squares.
+   They stay grey while the arrow fills, then each fills in with its own brand colour. */
 .job-logos {
   grid-template-columns: repeat(2, 72px);
   gap: 14px;
@@ -1282,16 +1299,33 @@ select:focus-visible {
   padding: 0;
   border: 0;
   background: none;
+  animation: none;
 }
 
 .job-logo {
   width: 100%;
   height: 100%;
+  background: var(--brand);
+  animation: logo-color 4s ease-out infinite both;
   -webkit-mask: no-repeat center / contain;
   mask: no-repeat center / contain;
 }
 
-/* Timeline: scan 0–34%, arrow fills 34–52%, matches drop in from 54%, all reset near the end. */
+/* Timeline: scan 0–34%, arrow fills 34–52%, logos colour in from 52%, all reset near the end. */
+@keyframes logo-color {
+  0%,
+  52% {
+    background: #cfc6c6;
+  }
+  60%,
+  92% {
+    background: var(--brand);
+  }
+  100% {
+    background: #cfc6c6;
+  }
+}
+
 @keyframes scan {
   0% {
     top: 0;
@@ -1443,6 +1477,7 @@ select:focus-visible {
 @media (prefers-reduced-motion: reduce) {
   .fill-arrow-bar,
   .job-list li,
+  .job-logo,
   .scanner,
   .field-done,
   .caret {
@@ -1451,10 +1486,6 @@ select:focus-visible {
 
   .slot.landed {
     animation: none;
-  }
-
-  .goal-bold {
-    transition: none;
   }
 }
 
@@ -2127,7 +2158,8 @@ select:focus-visible {
 /* The resume loop waits until the row is on screen, so it starts from the beginning. */
 .resume-demo:not(.play) .fill-arrow-bar,
 .resume-demo:not(.play) .scanner,
-.resume-demo:not(.play) .job-list li {
+.resume-demo:not(.play) .job-list li,
+.resume-demo:not(.play) .job-logo {
   animation-play-state: paused;
 }
 

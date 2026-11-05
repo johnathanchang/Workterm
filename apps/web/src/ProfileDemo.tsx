@@ -116,6 +116,7 @@ const SLOTS = [
   { label: "term", items: ["Fall 2027", "Winter 2028", "Summer 2028"] },
   { label: "location", items: ["Seattle", "Los Angeles", "San Francisco"] },
 ];
+const TAILORED = "tailored resume";
 const MATCH_COUNT = 248; // shown when motion is off; otherwise a random count each loop
 
 // A new random answer for each reel, never the exact same set as last time.
@@ -135,9 +136,10 @@ const GreenTick = () => (
 
 // One reel: the options repeated a few times, ending on the answer. Spinning slides the strip up to the last one.
 // Timing for one reel: it spins, stops, then flashes bright yellow. Only then does the next reel start.
-const SPIN_MS = 1300;
-const FLASH_MS = 600;
-const LOOP_PAUSE_MS = 1500; // after both check lines show, wait this long before the next loop
+// The reel cycle runs 60% faster than at first (each step about 1/1.6 as long).
+const SPIN_MS = 810;
+const FLASH_MS = 375; // matches the .slot.landed animation in styles.css
+const LOOP_PAUSE_MS = 1500; // after both answers show, wait this long before the next loop
 
 function Slot({ items, target, spun, landed }: { items: string[]; target: number; spun: boolean; landed: boolean }) {
   // Two full turns, then on to the chosen answer, so every spin looks like a real spin.
@@ -168,7 +170,9 @@ export function GoalsDemo() {
   const [landed, setLanded] = useState(() => SLOTS.map(() => false));
   const [targets, setTargets] = useState(() => SLOTS.map((slot) => slot.items.length - 1));
   const [count, setCount] = useState(done ? MATCH_COUNT : 0);
-  const [tailored, setTailored] = useState(done);
+  // How much of "tailored resume" has been typed so far.
+  const [typed, setTyped] = useState(done ? TAILORED : "");
+  const [typing, setTyping] = useState(false);
 
   useEffect(() => {
     if (!visible || reducedMotion()) return;
@@ -182,8 +186,8 @@ export function GoalsDemo() {
         setSpun(SLOTS.map(() => false));
         setLanded(SLOTS.map(() => false));
         setCount(0);
-        setTailored(false);
-        await wait(400, signal);
+        setTyped("");
+        await wait(250, signal);
         for (let i = 0; i < SLOTS.length; i++) {
           setSpun((s) => s.map((v, j) => (j === i ? true : v)));
           await wait(SPIN_MS, signal); // reel stops
@@ -192,10 +196,15 @@ export function GoalsDemo() {
         }
         for (let k = 1; k <= 20; k++) {
           setCount(Math.round((matches * k) / 20));
-          await wait(40, signal);
+          await wait(25, signal);
         }
-        await wait(500, signal);
-        setTailored(true);
+        await wait(310, signal);
+        setTyping(true);
+        for (let n = 1; n <= TAILORED.length; n++) {
+          setTyped(TAILORED.slice(0, n));
+          await wait(26, signal); // 75% faster than the first 45ms per letter
+        }
+        setTyping(false);
         await wait(LOOP_PAUSE_MS, signal);
       }
     })().catch(() => {});
@@ -211,16 +220,26 @@ export function GoalsDemo() {
         <Slot items={SLOTS[1].items} target={targets[1]} spun={spun[1]} landed={landed[1]} /> in{" "}
         <Slot items={SLOTS[2].items} target={targets[2]} spun={spun[2]} landed={landed[2]} />
       </p>
-      <p className={`goal-count${count > 0 ? " on" : ""}`}>
+      {/* The check lines are always there. The number counts up and "tailored resume" types in once the reels are done. */}
+      <p className="goal-count">
         <GreenTick />
         <span>
-          <strong>{count}</strong> matching co-ops found
+          <strong className={count > 0 ? "shown" : undefined}>{count}</strong> matching co-ops found
         </span>
       </p>
-      <p className={`goal-count${tailored ? " on" : ""}`}>
+      <p className="goal-count">
         <GreenTick />
         <span>
-          A <b className="goal-bold">tailored resume</b> ready for each one
+          A{" "}
+          {/* The invisible full words hold the space, so the line never shifts while it types. */}
+          <b className="goal-type">
+            <span className="goal-type-ghost">{TAILORED}</span>
+            <span className="goal-type-text">
+              {typed}
+              {typing && <i className="caret" />}
+            </span>
+          </b>{" "}
+          ready for each one
         </span>
       </p>
     </div>
@@ -231,7 +250,7 @@ export function GoalsDemo() {
 // Matched companies, shown as logos in their own brand colours (from Simple Icons, the same set the home page uses).
 const LOGO_CDN = "https://cdn.jsdelivr.net/npm/simple-icons@11.0.0/icons";
 const MATCHES: { name: string; slug: string; color: string; nudge?: number }[] = [
-  { name: "Tesla", slug: "tesla", color: "#cc0000", nudge: -4 }, // a hair left, so it lines up visually
+  { name: "Tesla", slug: "tesla", color: "#cc0000", nudge: -8 }, // a hair left, so it lines up visually
   { name: "Boeing", slug: "boeing", color: "#1d439c" },
   { name: "SpaceX", slug: "spacex", color: "#000000" },
   { name: "Airbus", slug: "airbus", color: "#00205b" },
@@ -326,13 +345,15 @@ export function ResumeDemo() {
       </svg>
       <ul className="job-list job-logos">
         {MATCHES.map((m, i) => (
-          <li key={m.slug} style={{ animationDelay: `${i * 0.075}s` }}>
+          <li key={m.slug}>
+            {/* Grey until the arrow is full, then each logo fills in with its brand colour (--brand). */}
             <span
               className="job-logo"
               role="img"
               aria-label={m.name}
               style={{
-                background: m.color,
+                ["--brand" as string]: m.color,
+                animationDelay: `${i * 0.075}s`,
                 transform: m.nudge ? `translateX(${m.nudge}px)` : undefined,
                 WebkitMaskImage: `url(${LOGO_CDN}/${m.slug}.svg)`,
                 maskImage: `url(${LOGO_CDN}/${m.slug}.svg)`,
