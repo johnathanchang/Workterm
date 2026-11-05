@@ -142,75 +142,68 @@ export function CreateProfile() {
   );
 }
 
-// Compared by kind of tool, plus Simplify by name. Simplify's values come from its public pages.
-const RIVALS = ["Workterm", "School job board", "ChatGPT", "Simplify"];
-
-type Cell = boolean | string | { main: string; sub?: string };
-const ROWS: { label: string; cells: Cell[]; price?: boolean }[] = [
-  { label: "Built around co-op terms", cells: [true, true, false, false] },
-  { label: "Rates your resume against each job", cells: [true, false, "If you paste it in", "Paid plan"] },
-  { label: "A tailored resume for every job", cells: [true, false, "One at a time, by hand", "Paid plan"] },
-  { label: "Finds firms that don't post jobs", cells: [true, false, false, false] },
-  { label: "Sends from your Gmail, after you approve", cells: [true, false, false, false] },
-  {
-    label: "Price",
-    price: true,
-    cells: [{ main: "$25 a month", sub: "or $45 per term" }, "Free", "$20 a month", "$39.99 a month"],
-  },
+// "Your co-op search, two ways": the time to apply to 50 co-ops manually versus with Workterm.
+// Our own estimates per application, shown as estimates. Competitors get their own pages in the footer.
+const TASKS = [
+  { task: "Rewrite your resume for the posting", byHand: 20, us: "Tailored for you. You review it." },
+  { task: "Find the right person to email", byHand: 10, us: "Found for you" },
+  { task: "Write a personal email", byHand: 10, us: "Drafted for you. You approve it." },
+  { task: "Track replies and follow up", byHand: 5, us: "Reply alerts and reminders" },
 ];
-
-const Mark = ({ cell }: { cell: Cell }) =>
-  cell === true ? (
-    <span className="yes" role="img" aria-label="Yes">
-      <Check />
-    </span>
-  ) : cell === false ? (
-    <span className="no" role="img" aria-label="No">
-      –
-    </span>
-  ) : typeof cell === "string" ? (
-    <span className="part">{cell}</span>
-  ) : (
-    <span className="price">
-      <strong>{cell.main}</strong>
-      {cell.sub && <small>{cell.sub}</small>}
-    </span>
-  );
+const APPLICATIONS = 50;
+const PER_APP_BY_HAND = TASKS.reduce((sum, t) => sum + t.byHand, 0); // 45 minutes
+const PER_APP_US = 2; // minutes to read and approve
+const HOURS_BY_HAND = Math.round((PER_APP_BY_HAND * APPLICATIONS) / 60); // about 38
+const HOURS_US = Math.round((PER_APP_US * APPLICATIONS) / 60); // about 2
 
 export function Compare() {
   return (
     <section className="showcase band" id="compare" aria-labelledby="compare-title">
-      <h2 id="compare-title">How Workterm compares.</h2>
-      <p className="showcase-sub">Other tools do one piece. Workterm covers the whole co-op search.</p>
+      <h2 id="compare-title">Your co-op search, two ways.</h2>
+      <p className="showcase-sub">Applying to {APPLICATIONS} co-ops. Here is where the time goes.</p>
 
-      <div className="compare-wrap">
-        <table className="compare">
-          <thead>
-            <tr>
-              <th scope="col">
-                <span className="visually-hidden">Feature</span>
-              </th>
-              {RIVALS.map((r, i) => (
-                <th key={r} scope="col" className={i === 0 ? "us" : undefined}>
-                  {r}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {ROWS.map((row) => (
-              <tr key={row.label} className={row.price ? "price-row" : undefined}>
-                <th scope="row">{row.label}</th>
-                {row.cells.map((c, i) => (
-                  <td key={i} className={i === 0 ? "us" : undefined}>
-                    <Mark cell={c} />
-                  </td>
-                ))}
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <div className="compare-wrap versus">
+        <div className="versus-row versus-head">
+          <span>For each application</span>
+          <span>Manual</span>
+          <span className="us">With Workterm</span>
+        </div>
+        {TASKS.map((t) => (
+          <div className="versus-row" key={t.task}>
+            <span className="versus-task">{t.task}</span>
+            <span className="versus-time">{t.byHand} min</span>
+            <span className="us">
+              <Check /> {t.us}
+            </span>
+          </div>
+        ))}
+        <div className="versus-row versus-total">
+          <span className="versus-task">Total per application</span>
+          <span className="versus-time">{PER_APP_BY_HAND} min</span>
+          <span className="us">
+            About {PER_APP_US} min<span className="phone-only">&nbsp;with Workterm</span>
+          </span>
+        </div>
+
+        <div className="time-bars" aria-label={`${APPLICATIONS} applications: about ${HOURS_BY_HAND} hours manual, about ${HOURS_US} hours with Workterm`}>
+          <p className="time-bars-title">{APPLICATIONS} applications</p>
+          <div className="time-bar">
+            <span className="time-bar-label">Manual</span>
+            <span className="time-bar-track">
+              <span className="time-bar-fill slow" style={{ width: "100%" }} />
+            </span>
+            <strong>about {HOURS_BY_HAND} hours</strong>
+          </div>
+          <div className="time-bar">
+            <span className="time-bar-label">With Workterm</span>
+            <span className="time-bar-track">
+              <span className="time-bar-fill fast" style={{ width: `${(HOURS_US / HOURS_BY_HAND) * 100}%` }} />
+            </span>
+            <strong>about {HOURS_US} hours</strong>
+          </div>
+        </div>
       </div>
+      <p className="versus-note">Our estimates. Your times will vary. Workterm never sends anything until you approve it.</p>
 
       <StartButton />
     </section>

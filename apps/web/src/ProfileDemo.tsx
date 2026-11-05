@@ -230,8 +230,8 @@ export function GoalsDemo() {
 // Step 3: Isaiah's resume gets scanned, the arrow fills, then matching companies' logos drop in. Pure CSS, one 4s loop.
 // Matched companies, shown as logos in their own brand colours (from Simple Icons, the same set the home page uses).
 const LOGO_CDN = "https://cdn.jsdelivr.net/npm/simple-icons@11.0.0/icons";
-const MATCHES = [
-  { name: "Tesla", slug: "tesla", color: "#cc0000" },
+const MATCHES: { name: string; slug: string; color: string; nudge?: number }[] = [
+  { name: "Tesla", slug: "tesla", color: "#cc0000", nudge: -4 }, // a hair left, so it lines up visually
   { name: "Boeing", slug: "boeing", color: "#1d439c" },
   { name: "SpaceX", slug: "spacex", color: "#000000" },
   { name: "Airbus", slug: "airbus", color: "#00205b" },
@@ -333,6 +333,7 @@ export function ResumeDemo() {
               aria-label={m.name}
               style={{
                 background: m.color,
+                transform: m.nudge ? `translateX(${m.nudge}px)` : undefined,
                 WebkitMaskImage: `url(${LOGO_CDN}/${m.slug}.svg)`,
                 maskImage: `url(${LOGO_CDN}/${m.slug}.svg)`,
               }}
