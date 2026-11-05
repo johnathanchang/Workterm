@@ -138,8 +138,8 @@ a.btn.ghost {
 }
 
 .cta-note {
-  margin: 16px 0 0;
-  font-size: 0.85rem;
+  margin: 20px 0 0;
+  font-size: 0.95rem;
   color: var(--muted);
 }
 
@@ -293,6 +293,18 @@ form .cta::after {
 .hero .cta::after,
 .showcase .cta::after {
   font-size: 1.15rem;
+}
+
+/* The hero button is the main call to action, so it is bigger than the others. */
+.hero .cta {
+  padding: 20px 44px;
+  border-radius: 16px;
+  font-size: 1.35rem;
+  box-shadow: 0 6px 0 #c99a00, 0 16px 36px -8px rgba(255, 204, 0, 0.6);
+}
+
+.hero .cta::after {
+  font-size: 1.5rem;
 }
 
 .card {
@@ -729,7 +741,7 @@ select:focus-visible {
 }
 
 .logos {
-  padding: 0 0 28px;
+  padding: 0 0 48px; /* red space under the strip lifts it up from the bottom of the first screen */
 }
 
 .logos-title {

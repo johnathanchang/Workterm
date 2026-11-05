@@ -139,7 +139,7 @@ export default function Home() {
             >
               Get started
             </button>
-            <p className="cta-note">From $25 a month. Cancel anytime.</p>
+            <p className="cta-note">See your matches before you pay. Cancel anytime.</p>
           </section>
 
           <section className="logos" aria-label="Companies you can target">
