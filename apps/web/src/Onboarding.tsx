@@ -1,6 +1,6 @@
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { type EventName, track } from "./api";
+import { type EventName, startCheckout, track } from "./api";
 import AuthButtons from "./AuthButtons";
 import { clearPrefill, readPrefill } from "./prefill";
 import { ALL_ROLES, PROGRAMS, ROLES, SCHOOLS, suggestedRoles } from "./lists";
@@ -102,6 +102,10 @@ export default function Onboarding() {
   const [returnTo, setReturnTo] = useState<Step | null>(null);
   const [found, setFound] = useState(0);
   const [plan, setPlan] = useState<"free" | "pro">("pro");
+  // No sign-in yet, so Stripe needs an email for the receipt and the entitlement.
+  const [payEmail, setPayEmail] = useState("");
+  const [paying, setPaying] = useState(false);
+  const [payError, setPayError] = useState("");
   const terms = upcomingTerms();
   const matches = exampleMatches(jobs, where, program);
 
@@ -497,23 +501,38 @@ export default function Onboarding() {
         {step === "plans" && (
           <form
             className="stack"
-            onSubmit={(e) => {
+            onSubmit={async (e) => {
               e.preventDefault();
-              if (plan === "pro") track("trial_start_click");
-              go("done");
+              if (plan === "free") return go("done");
+              track("trial_start_click");
+              setPaying(true);
+              setPayError("");
+              const result = await startCheckout(payEmail);
+              if ("url" in result) {
+                window.location.href = result.url; // off to Stripe's payment page
+                return;
+              }
+              setPaying(false);
+              setPayError(
+                result.error === "invalid_email"
+                  ? "Please enter a valid email."
+                  : result.error === "not_configured"
+                    ? "Payments are not set up yet. Try Free for now."
+                    : "Something went wrong. Please try again.",
+              );
             }}
           >
             <h1 className="authtitle">Choose your plan</h1>
-            <p className="lead small">Start free. Upgrade when you are ready to apply to more firms.</p>
+            <p className="lead small">Start free. Pay once for a co-op term when you are ready to apply to more firms.</p>
             <div className="plans" role="radiogroup" aria-label="Plans">
               <label className={plan === "pro" ? "plan on" : "plan"}>
                 <input type="radio" name="plan" checked={plan === "pro"} onChange={() => setPlan("pro")} />
                 <span className="plan-head">
                   <strong>Pro</strong>
-                  <span className="pill gold">Free trial</span>
+                  <span className="pill gold">One payment</span>
                 </span>
                 <span className="plan-price">
-                  $20 <small>a month after your trial</small>
+                  $35 <small>per co-op term</small>
                 </span>
                 <ul>
                   <li>Everything in Free</li>
@@ -537,9 +556,30 @@ export default function Onboarding() {
                 </ul>
               </label>
             </div>
-            <Nav back={() => history.back()} next={plan === "pro" ? "Start free trial" : "Continue with Free"} />
-            <p className="fine center">Cancel anytime. We remind you before your trial ends. We cannot promise a placement.</p>
-            <p className="notice">Preview: no payment is taken. Payments open when Workterm opens.</p>
+            {plan === "pro" && (
+              <label>
+                Email for your receipt
+                <input
+                  type="email"
+                  required
+                  autoComplete="email"
+                  value={payEmail}
+                  onChange={(e) => setPayEmail(e.target.value)}
+                  placeholder="you@school.ca"
+                />
+              </label>
+            )}
+            {payError && (
+              <p className="error" role="alert">
+                {payError}
+              </p>
+            )}
+            <Nav
+              back={() => history.back()}
+              next={plan === "free" ? "Continue with Free" : paying ? "Opening checkout…" : "Continue to payment"}
+              disabled={paying}
+            />
+            <p className="fine center">One payment per term, not a subscription. Payment is handled by Stripe. We cannot promise a placement.</p>
           </form>
         )}
 
@@ -579,7 +619,7 @@ export default function Onboarding() {
                 </button>
               </li>
               <li>
-                <span>Plan</span> {plan === "pro" ? "Pro, free trial" : "Free"}
+                <span>Plan</span> {plan === "pro" ? "Pro" : "Free"}
                 <button type="button" className="linkish edit" onClick={() => edit("plans")} aria-label="Edit plan">
                   Edit
                 </button>

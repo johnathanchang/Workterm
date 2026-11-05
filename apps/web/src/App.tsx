@@ -41,11 +41,35 @@ function goToSection(e: React.MouseEvent, id: string) {
   setTimeout(scroll, 80);
 }
 
+// After Stripe, the student lands back here with ?checkout=success or ?checkout=cancelled.
+function useCheckoutResult(): "success" | "cancelled" | null {
+  const [result, setResult] = useState<"success" | "cancelled" | null>(() => {
+    const value = new URLSearchParams(window.location.search).get("checkout");
+    return value === "success" || value === "cancelled" ? value : null;
+  });
+  useEffect(() => {
+    if (!result) return;
+    // Drop the flag from the address bar so a reload does not show the banner again, and hide it after a while.
+    history.replaceState(null, "", window.location.pathname + window.location.hash);
+    const timer = setTimeout(() => setResult(null), 8000);
+    return () => clearTimeout(timer);
+  }, [result]);
+  return result;
+}
+
 export default function App() {
   const route = useRoute();
+  const checkout = useCheckoutResult();
 
   return (
     <>
+      {checkout && (
+        <p className={`checkout-banner ${checkout}`} role="status">
+          {checkout === "success"
+            ? "Payment received. Thank you! Pro is unlocked for your co-op term."
+            : "Payment cancelled. You were not charged."}
+        </p>
+      )}
       <header className="bar">
         <a className="brand" href="#/">
           Workterm

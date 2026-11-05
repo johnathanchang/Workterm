@@ -25,6 +25,26 @@ export async function joinWaitlist(input: {
   }
 }
 
+export type CheckoutResult = { url: string } | { error: "invalid_email" | "not_configured" | "error" };
+
+// Asks the API for a Stripe Checkout page. The browser never sees a Stripe key.
+export async function startCheckout(email: string): Promise<CheckoutResult> {
+  try {
+    const res = await fetch(`${BASE}/checkout`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email }),
+    });
+    if (res.status === 400) return { error: "invalid_email" };
+    if (res.status === 503) return { error: "not_configured" };
+    if (!res.ok) return { error: "error" };
+    const data = (await res.json()) as { url?: string };
+    return data.url ? { url: data.url } : { error: "error" };
+  } catch {
+    return { error: "error" };
+  }
+}
+
 // Fire and forget. A failed tracking call must never break the page.
 export type EventName =
   | "page_view"
