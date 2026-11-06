@@ -1,6 +1,6 @@
 # 0004 – Sign in with school Google or Microsoft accounts
 
-Status: proposed (needs Johnathan's OK before we connect it)
+Status: accepted for Microsoft (decision 0007, Nov 6, 2026); Google sign-in still needs Johnathan's OK
 
 ## Decision
 
