@@ -17,7 +17,7 @@ const FAQ = [
   },
   {
     q: "What does Workterm do?",
-    a: "Workterm builds a resume for each job, rates your resume against that job, finds roles and firms that fit you, and helps you apply to many at once.",
+    a: "Workterm builds a resume for each job, rates your resume against that job, finds roles and companies that fit you, and helps you apply to many at once.",
   },
   {
     q: "How does Workterm rate my resume?",
