@@ -9,7 +9,7 @@ We are in Phase 0, before Gate A. Web first (decision 0001), so iOS and Android 
 - [x] **[AGENT]** Propose 3 niches (chapter 00): one-liner, 2–3 reference apps, domain watch-outs, scorecard (7 criteria, 1–5 each). Niche chosen: Workterm, 30/35.
 - [ ] **[AGENT]** Top candidate: read competitors' 1–3★ App Store reviews, write 10 short-form video hooks, draft a waitlist site (Worker + D1).
 - [ ] **[HUMAN]** Post the videos and waitlist for one week.
-- [ ] **[AGENT]** Run chapter 12 unit economics at the human's price.
+- [ ] **[AGENT]** Run chapter 12 unit economics at the human's price. Draft in `docs/unit-economics.md`, needs your review.
 - **Gate A, build only if:** scorecard ≥ 30/35 for us (playbook: 25) with no 1s · demand signal (saves, shares, "what app is this?", waitlist ≥ 10% of visitors) · revenue per download (chapter 12) well above cost per download.
 
 ### Phase 1: Brief
