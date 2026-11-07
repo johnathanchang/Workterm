@@ -4,6 +4,7 @@ import { type EventName, startCheckout, track } from "./api";
 import AuthButtons from "./AuthButtons";
 import { clearPrefill, readPrefill } from "./prefill";
 import { ALL_ROLES, PROGRAMS, ROLES, SCHOOLS, suggestedRoles } from "./lists";
+import Pick from "./Pick";
 import Suggest from "./Suggest";
 
 // Rule 10: questions, then "Finding your firms…", then the matched firms (the aha moment), then account, then the paywall.
@@ -30,9 +31,12 @@ const FINDING = ["Reading your goals", "Checking your resume", "Searching firms 
 const FINDING_MS = 700;
 
 // "Software, Data and Design"
-const listOf = (items: string[]) => (items.length < 2 ? items.join("") : `${items.slice(0, -1).join(", ")} and ${items[items.length - 1]}`);
 
-type Match = { firm: string; role: string; fit: number; why: string; hidden: boolean };
+type Match = { firm: string; job: string; role: string; fit: number; why: string; hidden: boolean };
+
+// Puts just the job name in italics inside a sentence, like "Fits your *Policy / Government* goal."
+const withJob = (text: string, job: string) =>
+  text.split(job).flatMap((part, i) => (i === 0 ? [part] : [<em key={i}>{job}</em>, part]));
 
 // Up to six example matches, spread across the job areas the student picked.
 function exampleMatches(jobs: string[], where: string, program: string): Match[] {
@@ -46,11 +50,17 @@ function exampleMatches(jobs: string[], where: string, program: string): Match[]
       if (!firm || out.some((m) => m.firm === firm)) continue;
       const n = out.length;
       const why = [
-        `Fits your ${job} goal${program ? ` and your ${program} program` : ""}.`,
-        place ? `${place === "Remote" ? "Works remotely" : `Close to ${place}`}, and a fit for your ${job} goal.` : `A fit for your ${job} goal.`,
-        `Small team that hires students without posting jobs.`,
+        program
+          ? `Real ${job} projects that turn your ${program} studies into experience employers want.`
+          : `Real ${job} projects that give you the experience employers look for.`,
+        place === "Remote"
+          ? `Builds your ${job} skills from anywhere, and grows a network in your field.`
+          : place
+            ? `Builds your ${job} skills in ${place}, and grows a network where you want to work.`
+            : `Builds your ${job} skills and a network in your field.`,
+        `A small team that gives students real ${job} work. It hires without posting jobs.`,
       ][n % 3];
-      out.push({ firm, role: `${job} co-op`, fit: 94 - n * 4, why, hidden: n % 3 === 2 });
+      out.push({ firm, job, role: `${job} co-op`, fit: 94 - n * 4, why, hidden: n % 3 === 2 });
     }
   }
   return out;
@@ -267,7 +277,7 @@ export default function Onboarding() {
   return (
     <main className="authpage">
       {arrowSlot && createPortal(arrows, arrowSlot)}
-      <div className="card authcard wide" ref={cardRef}>
+      <div className={step === "plans" ? "card authcard wide plans-step" : "card authcard wide"} ref={cardRef}>
         {bubble && (
           <p className="field-bubble" role="alert" style={{ top: bubble.top, left: bubble.left }}>
             <span aria-hidden="true">!</span> Please fill out this field.
@@ -314,24 +324,8 @@ export default function Onboarding() {
             <Suggest label="School" options={SCHOOLS} value={school} onChange={setSchool} placeholder="Start typing your school" />
             <Suggest label="Program" options={PROGRAMS} value={program} onChange={setProgram} placeholder="Start typing your program" />
             <div className="row">
-              <label>
-                Year of study
-                <select value={level} onChange={(e) => setLevel(e.target.value)} required>
-                  <option value="">Choose</option>
-                  {LEVELS.map((l) => (
-                    <option key={l}>{l}</option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                Next co-op term
-                <select value={term} onChange={(e) => setTerm(e.target.value)} required>
-                  <option value="">Choose</option>
-                  {terms.map((t) => (
-                    <option key={t}>{t}</option>
-                  ))}
-                </select>
-              </label>
+              <Pick label="Year of study" options={LEVELS} value={level} onChange={setLevel} />
+              <Pick label="Next co-op term" options={terms} value={term} onChange={setTerm} />
             </div>
             <Nav back={back} backLabel={idx === 0 ? "Home" : undefined} />
           </form>
@@ -455,25 +449,32 @@ export default function Onboarding() {
         {step === "matches" && (
           <div className="stack">
             <p className="eyebrow-small">Your matches</p>
-            <h1 className="authtitle">We found {matches.length} firms that fit you.</h1>
-            <p className="lead small">
-              Ranked by fit for {listOf(jobs.slice(0, 3))}
-              {term ? ` in ${term}` : ""}. Some of them do not post jobs, so most students never find them.
-            </p>
+            <h1 className="authtitle">
+              Meet your {matches.length} best-fit companies for{" "}
+              {jobs.slice(0, 3).map((j, i, all) => (
+                <span key={j}>
+                  {i > 0 && (i === all.length - 1 ? " and " : ", ")}
+                  <em>{j}</em>
+                </span>
+              ))}
+            </h1>
             <ol className="matches">
               {matches.map((m) => (
                 <li key={m.firm}>
                   <div>
-                    <strong>{m.firm}</strong>
-                    <span className="match-role">{m.role}</span>
-                    <span className="match-why">{m.why}</span>
-                    {m.hidden && <span className="pill gold">Not posted</span>}
+                    <span className="match-title">
+                      <strong>{m.firm}</strong>
+                      {m.hidden && <span className="match-tag">NOT POSTED</span>}
+                    </span>
+                    <span className="match-role">{withJob(m.role, m.job)}</span>
+                    <span className="match-why">{withJob(m.why, m.job)}</span>
                   </div>
-                  <span className="pill green">{m.fit}% fit</span>
+                  <div className="match-side">
+                    <span className="pill green">{m.fit}% fit</span>
+                  </div>
                 </li>
               ))}
             </ol>
-            <p className="notice">Preview: these are examples. Real matches from your resume arrive when Workterm opens.</p>
             <div className="nav">
               <BackButton onClick={() => history.back()} />
               <button type="button" onClick={() => setStep("account")}>
@@ -521,36 +522,40 @@ export default function Onboarding() {
               );
             }}
           >
-            <h1 className="authtitle">Choose your plan</h1>
-            <p className="lead small">Pick how you want to pay. Both plans include everything.</p>
+            <h1 className="authtitle">One final step.</h1>
+            <p className="lead small">Cancel anytime. Payment is handled by Stripe. We cannot promise a placement.</p>
             <div className="plans" role="radiogroup" aria-label="Plans">
               <label className={plan === "term" ? "plan on" : "plan"}>
                 <input type="radio" name="plan" checked={plan === "term"} onChange={() => setPlan("term")} />
                 <span className="plan-head">
-                  <strong>Pro – Term</strong>
+                  <strong>Per term</strong>
                   <span className="pill gold">Best value</span>
                 </span>
                 <span className="plan-price">
-                  $45 <small>every 4 months, about one co-op term</small>
+                  $45 <small>every 4 months</small>
                 </span>
+                <span className="plan-for">For a full co-op search, start to offer.</span>
                 <ul>
-                  <li>See your matches and rate your resume</li>
-                  <li>A tailored resume for every job</li>
-                  <li>Emails sent from your Gmail, after you approve</li>
-                  <li>Follow-ups and reply tracking</li>
+                  <li>Everything in Monthly</li>
+                  <li>Covers a whole 4-month hiring season</li>
+                  <li>Save $55 a term versus Monthly</li>
+                  <li>A reminder before each term renews</li>
                 </ul>
               </label>
               <label className={plan === "monthly" ? "plan on" : "plan"}>
                 <input type="radio" name="plan" checked={plan === "monthly"} onChange={() => setPlan("monthly")} />
                 <span className="plan-head">
-                  <strong>Pro – Monthly</strong>
+                  <strong>Monthly</strong>
                 </span>
                 <span className="plan-price">
                   $25 <small>a month</small>
                 </span>
+                <span className="plan-for">For a quick start. Stop any month.</span>
                 <ul>
-                  <li>Everything in Pro – Term</li>
-                  <li>Pay month by month</li>
+                  <li>See your matches and rate your resume</li>
+                  <li>A tailored resume for every job</li>
+                  <li>Emails sent from your Gmail or Outlook, after you approve</li>
+                  <li>Follow-ups and reply tracking</li>
                 </ul>
               </label>
             </div>
@@ -576,8 +581,7 @@ export default function Onboarding() {
               disabled={paying}
             />
             <p className="fine center">
-              Renews automatically every {plan === "term" ? "4 months" : "month"} until you cancel. Cancel anytime. Payment is
-              handled by Stripe. We cannot promise a placement.
+              Renews automatically every {plan === "term" ? "4 months" : "month"} until you cancel.
             </p>
           </form>
         )}

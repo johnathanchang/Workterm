@@ -14,3 +14,4 @@ Parked ideas. Not part of v1 or v1.1. Plan for v1 and v1.1 is in `docs/core-feat
 - Same engine for pre-health shadowing
 - In-app "Manage subscription" button (Stripe customer portal), once sign-in exists
 - Two-sided marketplace: companies post co-ops to Workterm for free (see docs/strategy.md)
+- Annual plan: one yearly price below 3 terms (about $120). Add once students renew for 2+ terms; needs a new Stripe price and an update to decision 0005

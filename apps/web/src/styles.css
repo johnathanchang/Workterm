@@ -555,6 +555,11 @@ a:focus-visible {
   width: min(100%, 560px);
 }
 
+/* The plan step is wider so the two plan cards have room side by side. */
+.authcard.plans-step {
+  width: min(100%, 760px);
+}
+
 .authtitle {
   margin: 0;
   font-family: var(--display);
@@ -1742,12 +1747,68 @@ select:focus-visible {
 .match-why {
   font-size: 0.85rem;
   color: var(--muted);
+  text-align: left;
 }
 
-.matches .pill.gold {
-  margin-top: 4px;
-  padding: 2px 8px;
-  font-size: 0.72rem;
+.match-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+}
+
+/* "NOT POSTED" in capitals, beside the firm name. */
+.match-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: #a63a3a;
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  color: #ffd84d;
+}
+
+.match-tag::before {
+  content: "\2726";
+  font-size: 0.62rem;
+}
+
+/* The fit pill with the "Not posted" tag under it. */
+.matches li > .match-side {
+  display: grid;
+  flex: none;
+  width: 92px;
+  gap: 6px;
+  justify-items: center;
+}
+
+/* A soft light sweeps across the green fit pill every few seconds to draw the eye. */
+.matches .pill.green {
+  position: relative;
+  justify-content: center;
+  width: 100%;
+  overflow: hidden;
+}
+
+.matches .pill.green::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -60%;
+  width: 40%;
+  background: linear-gradient(105deg, transparent, rgba(255, 255, 255, 0.55), transparent);
+  transform: skewX(-20deg);
+  animation: pill-shine 3.2s ease-in-out 1s infinite;
+}
+
+
+@keyframes pill-shine {
+  0% { left: -60%; }
+  45%, 100% { left: 130%; }
 }
 
 @keyframes match-in {
@@ -1761,16 +1822,36 @@ select:focus-visible {
   .matches li {
     animation: none;
   }
+
+  .matches .pill.green::after {
+    animation: none;
+    display: none;
+  }
 }
 
+/* Per term on the left, Monthly on the right. One column on phones. */
 .plans {
   display: grid;
+  grid-template-columns: 1fr 1fr;
   gap: 10px;
+}
+
+@media (max-width: 560px) {
+  .plans {
+    grid-template-columns: 1fr;
+  }
+}
+
+.plan-for {
+  font-size: 0.88rem;
+  font-style: italic;
+  color: var(--muted);
 }
 
 .plan {
   position: relative;
   display: grid;
+  align-content: start;
   gap: 6px;
   padding: 14px 16px;
   border: 1.5px solid var(--line);
@@ -1823,6 +1904,15 @@ select:focus-visible {
 /* Type-to-filter dropdown for School and Program on the sign-up page. */
 .suggest {
   position: relative;
+}
+
+.pick input {
+  padding-right: 40px;
+  cursor: pointer;
+  caret-color: transparent;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' fill='none' stroke='%237a2a2a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M1 1.5l5 5 5-5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
 }
 
 .suggest-list {
@@ -2106,17 +2196,17 @@ select:focus-visible {
 /* "Set up your profile": three wide rows, words left and animation right. Each slides in from the left. */
 .step-rows {
   display: grid;
-  gap: 20px;
+  gap: 14px;
   text-align: left;
 }
 
 .step-row {
   display: grid;
   grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
-  gap: 40px;
+  gap: 32px;
   align-items: center;
-  min-height: 300px;
-  padding: 36px 40px;
+  min-height: 0;
+  padding: 22px 40px;
   opacity: 0;
   transform: translateX(-120px); /* cards 1 and 3 start off to the left, slide in when scrolled to */
   transition: opacity 1.4s ease-out, transform 1.6s cubic-bezier(0.2, 0.8, 0.2, 1);
