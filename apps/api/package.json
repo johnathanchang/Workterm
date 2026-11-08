@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "wrangler d1 migrations apply DB --local && wrangler dev",
+    "dev": "wrangler d1 migrations apply DB --local && wrangler dev --port ${API_PORT:-8787}",
     "check": "tsc --noEmit",
     "test": "bun test",
     "deploy:staging": "wrangler deploy --env staging"

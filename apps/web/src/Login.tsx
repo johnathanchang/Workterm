@@ -16,6 +16,12 @@ export default function Login() {
             opens.
           </p>
         )}
+        {/* Dev only: until Google and Microsoft sign-in are live, open a dashboard with the email you paid with. */}
+        {import.meta.env.DEV && (
+          <p className="fine center">
+            Testing locally? <a href="#/dashboard">Open a dashboard with an email</a>
+          </p>
+        )}
         <p className="fine center">
           New to Workterm? <a href="#/signup">Sign up</a>
         </p>

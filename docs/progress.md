@@ -55,6 +55,9 @@ We are in Phase 0, before Gate A. Web first (decision 0001), so iOS and Android 
 
 ### Phase 6: Web app
 
+- [x] Basic dashboards (decision 0008): student dashboard and welcome page, admin dashboard with funnel, schools, programs, years and "how they found us". Onboarding saves a profile. Checked in the browser; `bun run check && bun test` pass.
+- [ ] **[HUMAN]** Create Google and Microsoft sign-in apps and send the keys through `.dev.vars` (agent gives click-by-click steps), then wire Better Auth and remove the email lookup.
+
 - [ ] **[AGENT]** Design tokens first (chapter 09), then landing page, core feature, settings (with account deletion), Stripe checkout in **test mode**.
 - **Done when:** a staging visitor can land, try the core action, sign in, and reach checkout, at phone width.
 

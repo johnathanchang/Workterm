@@ -16,7 +16,7 @@ beforeAll(async () => {
   dispose = proxy.dispose;
   // Tests never use the real keys in .dev.vars. Each Stripe test sets fake ones and mocks fetch.
   for (const k of Object.keys(env)) if (k.startsWith("STRIPE_")) delete env[k];
-  for (const file of ["0001_waitlist.sql", "0002_entitlements.sql", "0003_subscriptions.sql"]) {
+  for (const file of ["0001_waitlist.sql", "0002_entitlements.sql", "0003_subscriptions.sql", "0004_profiles.sql"]) {
     const sql = await Bun.file(join(api, "migrations", file)).text();
     // exec wants one statement per line, so strip comments and put each statement on its own line.
     await env.DB.exec(sql.replace(/--.*$/gm, "").replace(/\s+/g, " ").replace(/; /g, ";\n"));
@@ -91,7 +91,7 @@ test("checkout creates a subscription session for the chosen plan", async () => 
     expect(form.get("line_items[0][price]")).toBe("price_month");
     expect(form.get("subscription_data[metadata][email]")).toBe("student@mac.ca");
     expect(form.get("subscription_data[metadata][plan]")).toBe("monthly");
-    expect(form.get("success_url")).toBe("http://localhost:5173/?checkout=success&plan=monthly#/");
+    expect(form.get("success_url")).toBe("http://localhost:5173/?checkout=success&plan=monthly#/welcome");
     expect(form.get("cancel_url")).toBe("http://localhost:5173/?checkout=cancelled#/signup");
 
     const termRes = await post("/checkout", { email: "a@b.ca", plan: "term" });
@@ -99,7 +99,7 @@ test("checkout creates a subscription session for the chosen plan", async () => 
     const termForm = new URLSearchParams(sent!.body);
     expect(termForm.get("line_items[0][price]")).toBe("price_term");
     expect(termForm.get("subscription_data[metadata][plan]")).toBe("term");
-    expect(termForm.get("success_url")).toBe("http://localhost:5173/?checkout=success&plan=term#/");
+    expect(termForm.get("success_url")).toBe("http://localhost:5173/?checkout=success&plan=term#/welcome");
 
     const row = await env.DB.prepare("SELECT COUNT(*) AS n FROM events WHERE name = 'checkout_started'").first();
     expect(row.n).toBe(2);
@@ -168,4 +168,37 @@ test("webhook rejects bad, missing, and stale signatures; unpaid subscriptions g
   } finally {
     delete env.STRIPE_WEBHOOK_SECRET;
   }
+});
+
+test("profile is saved, read back with plan status, and a repeat updates it", async () => {
+  const answers = { email: "Ada@Mac.ca", name: "Ada", school: "McMaster", program: "Engineering", level: "2nd year", jobs: ["Software", "Data"], struggles: ["a"], heard_from: "TikTok" };
+  expect((await post("/profile", answers)).status).toBe(200);
+  expect((await post("/profile", { ...answers, term: "Winter 2027" })).status).toBe(200);
+  const me = await (await call("/me?email=ada@mac.ca")).json();
+  expect(me.profile.name).toBe("Ada");
+  expect(me.profile.jobs).toEqual(["Software", "Data"]);
+  expect(me.profile.term).toBe("Winter 2027");
+  expect(me.pro).toBe(false);
+  expect((await post("/profile", { name: "No email" })).status).toBe(400);
+});
+
+test("profile, me and billing portal refuse to run in production", async () => {
+  const prod = { ...env, APP_ENV: "production" };
+  const get = (path: string, init?: RequestInit) => worker.fetch(new Request(`http://test${path}`, init) as any, prod, { waitUntil() {} } as any);
+  expect((await get("/me?email=ada@mac.ca")).status).toBe(403);
+  expect((await get("/profile", { method: "POST", body: JSON.stringify({ email: "a@b.ca" }) })).status).toBe(403);
+});
+
+test("admin overview needs the key, then returns the numbers", async () => {
+  env.ADMIN_KEY = "test-admin-key";
+  expect((await call("/admin/overview")).status).toBe(401);
+  expect((await call("/admin/overview", { headers: { Authorization: "Bearer wrong" } })).status).toBe(401);
+  const res = await call("/admin/overview", { headers: { Authorization: "Bearer test-admin-key" } });
+  expect(res.status).toBe(200);
+  const data = await res.json();
+  expect(data.totals.students).toBeGreaterThanOrEqual(1);
+  expect(data.breakdowns.schools[0].label).toBe("McMaster");
+  expect(data.recent[0].email).toBe("ada@mac.ca");
+  delete env.ADMIN_KEY;
+  expect((await call("/admin/overview", { headers: { Authorization: "Bearer test-admin-key" } })).status).toBe(503);
 });

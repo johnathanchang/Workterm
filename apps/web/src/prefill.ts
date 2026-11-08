@@ -43,6 +43,7 @@ export type Draft = {
   level: string;
   experience: string;
   applied: string;
+  heard: string;
   struggles: string[];
   goals: string[];
   jobs: string[];

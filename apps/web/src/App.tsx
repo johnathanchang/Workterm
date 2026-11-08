@@ -1,15 +1,18 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import Admin from "./Admin";
 import Blog, { POSTS } from "./Blog";
 import Competitor, { RIVALS } from "./Competitors";
+import Dashboard from "./Dashboard";
 import Home from "./Home";
 import Login from "./Login";
 import Onboarding from "./Onboarding";
 import { clearDraft } from "./prefill";
 import Privacy from "./Privacy";
 import Refund from "./Refund";
+import { getSessionEmail } from "./session";
 import Terms from "./Terms";
 
-// Tiny hash router: #/login, #/signup, #/blog/<slug>, #/terms, #/privacy, #/refund and #/compare/<slug>. No router library needed yet.
+// Tiny hash router: #/dashboard, #/welcome, #/admin, #/login, #/signup, #/blog/<slug>, #/terms, #/privacy, #/refund and #/compare/<slug>. No router library needed yet.
 function useRoute(): string {
   const read = () => window.location.hash.replace(/^#/, "") || "/";
   const [route, setRoute] = useState(read);
@@ -75,6 +78,8 @@ function checkoutMessage({ status, plan }: CheckoutResult): string {
 export default function App() {
   const route = useRoute();
   const checkout = useCheckoutResult();
+  // Re-read on every route change, so the header updates right after paying or switching accounts.
+  const signedIn = useMemo(() => getSessionEmail() !== "", [route]);
 
   return (
     <>
@@ -90,17 +95,29 @@ export default function App() {
         <nav className="auth" aria-label="Account">
           {/* The sign-up page puts its back and next arrows here. */}
           <span id="header-arrows" className="arrows" />
-          <a className="btn ghost" href="#/login">
-            Log in
-          </a>
-          <a className="btn cta" href="#/signup">
-            Sign up
-          </a>
+          {route === "/admin" ? null : signedIn ? (
+            <a className="btn cta" href="#/dashboard">
+              Dashboard
+            </a>
+          ) : (
+            <>
+              <a className="btn ghost" href="#/login">
+                Log in
+              </a>
+              <a className="btn cta" href="#/signup">
+                Sign up
+              </a>
+            </>
+          )}
         </nav>
       </header>
 
       {route === "/login" ? (
         <Login />
+      ) : route === "/dashboard" || route === "/welcome" ? (
+        <Dashboard welcome={route === "/welcome"} />
+      ) : route === "/admin" ? (
+        <Admin />
       ) : route === "/signup" ? (
         <Onboarding />
       ) : route === "/terms" ? (

@@ -4,8 +4,20 @@
     {
       "name": "workterm-dev",
       "runtimeExecutable": "bun",
-      "runtimeArgs": ["dev"],
+      "runtimeArgs": [
+        "dev"
+      ],
       "port": 5173
+    },
+    {
+      "name": "workterm-dev-alt",
+      "runtimeExecutable": "env",
+      "runtimeArgs": [
+        "API_PORT=8790",
+        "bun",
+        "dev"
+      ],
+      "port": 5175
     }
   ]
 }

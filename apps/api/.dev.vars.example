@@ -3,3 +3,5 @@ STRIPE_SECRET_KEY=sk_test_xxx
 STRIPE_PRICE_MONTHLY=price_xxx
 STRIPE_PRICE_TERM=price_xxx
 STRIPE_WEBHOOK_SECRET=whsec_xxx
+# Opens the admin dashboard. Any long random string.
+ADMIN_KEY=change-me

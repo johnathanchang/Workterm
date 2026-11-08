@@ -18,3 +18,7 @@ Parked ideas. Not part of v1 or v1.1. Plan for v1 and v1.1 is in `docs/core-feat
 - Onboarding: send the "what makes it hard" answers as anonymous events, so we learn which pains are most common and use them as video hooks (check rule 7 first)
 - Onboarding: real student quotes on the "You're not alone" screen, once we have real users who agree to be quoted
 - Onboarding: skip the name, school and program cards when the home page form already filled them, if testing shows students find the repeat annoying
+- Admin: replace the admin key with Google sign-in and a team allow-list; add a view of one student's full journey
+- Customer dashboard: live "Ask Workterm" helper (streamed, logged with cost), resume editor and tailoring, application tracker from real events
+- Onboarding: a longer, more visual flow that looks different from other apps (low priority); redo the screen before pricing
+- Footers: polish (low priority)

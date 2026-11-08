@@ -9,6 +9,8 @@ interface Env {
   STRIPE_PRICE_MONTHLY?: string; // "price_..." for the Monthly Plan ($25 a month)
   STRIPE_PRICE_TERM?: string; // "price_..." for the Term Plan ($45 every 4 months)
   STRIPE_WEBHOOK_SECRET?: string; // "whsec_..." from `stripe listen` or the webhook endpoint settings
+  // Opens /admin/overview. Any long random string. Replaced by admin Google sign-in once Better Auth exists.
+  ADMIN_KEY?: string;
 }
 
 type Plan = "monthly" | "term";
@@ -30,6 +32,11 @@ const ALLOWED_EVENTS = new Set([
   "paywall_view",
   "trial_start_click",
   "onboarding_completed",
+  // Dashboards. Every user-visible feature emits an event (rule 9).
+  "welcome_view",
+  "dashboard_view",
+  "profile_edited",
+  "assistant_message",
 ]);
 
 export default {
@@ -63,6 +70,18 @@ export default {
           break;
         case "GET /me/entitlements":
           response = await getEntitlements(url, env);
+          break;
+        case "POST /profile":
+          response = await saveProfile(request, env);
+          break;
+        case "GET /me":
+          response = await getMe(url, env);
+          break;
+        case "POST /billing-portal":
+          response = await billingPortal(request, env);
+          break;
+        case "GET /admin/overview":
+          response = await adminOverview(request, env);
           break;
         default:
           response = Response.json({ error: "not_found" }, { status: 404 });
@@ -150,7 +169,7 @@ async function startCheckout(request: Request, env: Env): Promise<Response> {
     "subscription_data[metadata][email]": email,
     "subscription_data[metadata][plan]": plan,
     // The plan comes back in the address so the thank-you banner can name it.
-    success_url: `${env.WEB_ORIGIN}/?checkout=success&plan=${plan}#/`,
+    success_url: `${env.WEB_ORIGIN}/?checkout=success&plan=${plan}#/welcome`,
     // Sign-up keeps the student's answers in the tab, so a cancel lands back on the plan picker.
     cancel_url: `${env.WEB_ORIGIN}/?checkout=cancelled#/signup`,
   });
@@ -284,10 +303,204 @@ async function getEntitlements(url: URL, env: Env): Promise<Response> {
   return Response.json({ pro: row !== null, plan: row?.plan ?? null, expires_at: row?.expires_at ?? null });
 }
 
+// Until sign-in exists, /me, /profile and /billing-portal find a student by email. That is fine on a dev machine
+// and not safe in public (anyone could type someone else's email), so they refuse to run in production.
+// Better Auth replaces the email with the signed-in session, and this check goes away.
+function emailLookupAllowed(env: Env): boolean {
+  return env.APP_ENV !== "production";
+}
+
+const jsonList = (value: unknown, maxItems: number, maxLength: number): string => {
+  if (!Array.isArray(value)) return "[]";
+  const items = value.map((v) => cleanText(v, maxLength)).filter((v): v is string => v !== null);
+  return JSON.stringify(items.slice(0, maxItems));
+};
+
+const parseList = (raw: string | null): string[] => {
+  try {
+    const v: unknown = JSON.parse(raw ?? "[]");
+    return Array.isArray(v) ? v.filter((x): x is string => typeof x === "string") : [];
+  } catch {
+    return [];
+  }
+};
+
+// Saves the onboarding answers (or edits from the dashboard). One row per email.
+async function saveProfile(request: Request, env: Env): Promise<Response> {
+  if (!emailLookupAllowed(env)) return Response.json({ error: "not_available" }, { status: 403 });
+  const body = await readJson(request, 6_000);
+  const email = cleanText(body?.email, 254)?.toLowerCase();
+  if (!body || !email || !EMAIL_PATTERN.test(email)) return Response.json({ error: "invalid_email" }, { status: 400 });
+
+  const now = Date.now();
+  await env.DB
+    .prepare(
+      `INSERT INTO profiles
+         (email, name, school, program, level, experience, applied, struggles, goals, jobs, term, place, heard_from, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       ON CONFLICT(email) DO UPDATE SET
+         name = excluded.name, school = excluded.school, program = excluded.program, level = excluded.level,
+         experience = excluded.experience, applied = excluded.applied, struggles = excluded.struggles,
+         goals = excluded.goals, jobs = excluded.jobs, term = excluded.term, place = excluded.place,
+         heard_from = COALESCE(excluded.heard_from, profiles.heard_from), updated_at = excluded.updated_at`,
+    )
+    .bind(
+      email,
+      cleanText(body.name, 100),
+      cleanText(body.school, 100),
+      cleanText(body.program, 100),
+      cleanText(body.level, 50),
+      cleanText(body.experience, 100),
+      cleanText(body.applied, 50),
+      jsonList(body.struggles, 10, 100),
+      jsonList(body.goals, 10, 100),
+      jsonList(body.jobs, 10, 100),
+      cleanText(body.term, 50),
+      cleanText(body.place, 100),
+      cleanText(body.heard_from, 100),
+      now,
+      now,
+    )
+    .run();
+  return Response.json({ ok: true });
+}
+
+// The customer dashboard's one call: profile plus plan status.
+async function getMe(url: URL, env: Env): Promise<Response> {
+  if (!emailLookupAllowed(env)) return Response.json({ error: "not_available" }, { status: 403 });
+  const email = cleanText(url.searchParams.get("email"), 254)?.toLowerCase();
+  if (!email || !EMAIL_PATTERN.test(email)) return Response.json({ error: "invalid_email" }, { status: 400 });
+
+  const profile = await env.DB.prepare("SELECT * FROM profiles WHERE email = ?").bind(email).first<Record<string, any>>();
+  const ent = await env.DB
+    .prepare("SELECT plan, expires_at FROM entitlements WHERE email = ? AND status = 'active' AND expires_at > ? ORDER BY expires_at DESC LIMIT 1")
+    .bind(email, Date.now())
+    .first<{ plan: string; expires_at: number }>();
+
+  return Response.json({
+    email,
+    profile: profile
+      ? {
+          name: profile.name,
+          school: profile.school,
+          program: profile.program,
+          level: profile.level,
+          experience: profile.experience,
+          applied: profile.applied,
+          struggles: parseList(profile.struggles),
+          goals: parseList(profile.goals),
+          jobs: parseList(profile.jobs),
+          term: profile.term,
+          place: profile.place,
+        }
+      : null,
+    pro: ent !== null,
+    plan: ent?.plan ?? null,
+    renews_at: ent?.expires_at ?? null,
+  });
+}
+
+// Opens Stripe's billing portal, where a student updates their card or cancels.
+// Needs the portal switched on in the Stripe dashboard. Until then Stripe refuses and the page shows a friendly note.
+async function billingPortal(request: Request, env: Env): Promise<Response> {
+  if (!emailLookupAllowed(env)) return Response.json({ error: "not_available" }, { status: 403 });
+  if (!env.STRIPE_SECRET_KEY) return Response.json({ error: "payments_not_configured" }, { status: 503 });
+  const body = await readJson(request);
+  const email = cleanText(body?.email, 254)?.toLowerCase();
+  if (!email || !EMAIL_PATTERN.test(email)) return Response.json({ error: "invalid_email" }, { status: 400 });
+
+  const row = await env.DB
+    .prepare("SELECT stripe_customer_id FROM entitlements WHERE email = ? AND stripe_customer_id IS NOT NULL ORDER BY created_at DESC LIMIT 1")
+    .bind(email)
+    .first<{ stripe_customer_id: string }>();
+  if (!row) return Response.json({ error: "no_customer" }, { status: 404 });
+
+  const res = await fetch("https://api.stripe.com/v1/billing_portal/sessions", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${env.STRIPE_SECRET_KEY}`, "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({ customer: row.stripe_customer_id, return_url: `${env.WEB_ORIGIN}/#/dashboard` }),
+  });
+  if (!res.ok) {
+    console.error("stripe_portal_failed", res.status, await res.text());
+    return Response.json({ error: "portal_unavailable" }, { status: 502 });
+  }
+  const session = (await res.json()) as { url?: string };
+  return session.url ? Response.json({ url: session.url }) : Response.json({ error: "portal_unavailable" }, { status: 502 });
+}
+
+// Compares two secrets without leaking where they differ.
+async function safeEqual(a: string, b: string): Promise<boolean> {
+  const enc = new TextEncoder();
+  const [x, y] = await Promise.all([crypto.subtle.digest("SHA-256", enc.encode(a)), crypto.subtle.digest("SHA-256", enc.encode(b))]);
+  const xa = new Uint8Array(x);
+  const ya = new Uint8Array(y);
+  let diff = 0;
+  for (let i = 0; i < xa.length; i++) diff |= xa[i]! ^ ya[i]!;
+  return diff === 0;
+}
+
+// Numbers for the admin dashboard. Protected by ADMIN_KEY sent as "Authorization: Bearer <key>".
+async function adminOverview(request: Request, env: Env): Promise<Response> {
+  if (!env.ADMIN_KEY) return Response.json({ error: "admin_not_configured" }, { status: 503 });
+  const given = request.headers.get("Authorization")?.replace(/^Bearer\s+/i, "") ?? "";
+  if (!(await safeEqual(given, env.ADMIN_KEY))) return Response.json({ error: "unauthorized" }, { status: 401 });
+
+  const now = Date.now();
+  const since = now - 30 * 24 * 60 * 60 * 1000;
+  const count = async (sql: string, ...args: unknown[]) =>
+    (await env.DB.prepare(sql).bind(...args).first<{ n: number }>())?.n ?? 0;
+  const rows = async <T>(sql: string, ...args: unknown[]) => (await env.DB.prepare(sql).bind(...args).all<T>()).results;
+  // Top values of one profile column, e.g. schools. Column names are fixed here, never user input.
+  const top = (column: "school" | "program" | "level" | "heard_from" | "place") =>
+    rows<{ label: string; n: number }>(
+      `SELECT ${column} AS label, COUNT(*) AS n FROM profiles WHERE ${column} IS NOT NULL GROUP BY ${column} ORDER BY n DESC, label LIMIT 8`,
+    );
+
+  const [waitlist, students, monthly, term, events, steps, schools, programs, levels, heard, places, recent] = await Promise.all([
+    count("SELECT COUNT(*) AS n FROM waitlist"),
+    count("SELECT COUNT(*) AS n FROM profiles"),
+    count("SELECT COUNT(*) AS n FROM entitlements WHERE status = 'active' AND expires_at > ? AND plan = 'monthly'", now),
+    count("SELECT COUNT(*) AS n FROM entitlements WHERE status = 'active' AND expires_at > ? AND plan = 'term'", now),
+    rows<{ name: string; n: number }>("SELECT name, COUNT(*) AS n FROM events WHERE created_at > ? GROUP BY name", since),
+    rows<{ label: string; n: number }>(
+      "SELECT source AS label, COUNT(*) AS n FROM events WHERE name = 'onboarding_step' AND created_at > ? GROUP BY source",
+      since,
+    ),
+    top("school"),
+    top("program"),
+    top("level"),
+    top("heard_from"),
+    top("place"),
+    rows<Record<string, unknown>>(
+      `SELECT p.name, p.email, p.school, p.program, p.level, p.created_at,
+              EXISTS (SELECT 1 FROM entitlements e WHERE e.email = p.email AND e.status = 'active' AND e.expires_at > ?) AS paid
+       FROM profiles p ORDER BY p.created_at DESC LIMIT 20`,
+      now,
+    ),
+  ]);
+
+  return Response.json({
+    generated_at: now,
+    totals: {
+      waitlist,
+      students,
+      paying: monthly + term,
+      monthly,
+      term,
+      // Monthly $25, Term $45 per 4 months. A rough monthly recurring revenue in dollars.
+      mrr: Math.round(monthly * 25 + (term * 45) / 4),
+    },
+    events: Object.fromEntries(events.map((e) => [e.name, e.n])),
+    steps: Object.fromEntries(steps.map((s) => [s.label, s.n])),
+    breakdowns: { schools, programs, levels, heard_from: heard, places },
+    recent,
+  });
+}
+
 // Reads a small JSON body. Returns null if it is too big or not a JSON object.
-async function readJson(request: Request): Promise<Record<string, unknown> | null> {
+async function readJson(request: Request, maxBytes = MAX_BODY_BYTES): Promise<Record<string, unknown> | null> {
   const text = await request.text();
-  if (text.length === 0 || text.length > MAX_BODY_BYTES) return null;
+  if (text.length === 0 || text.length > maxBytes) return null;
   try {
     const value: unknown = JSON.parse(text);
     return value !== null && typeof value === "object" && !Array.isArray(value)
@@ -309,7 +522,7 @@ function corsHeaders(env: Env): Headers {
   return new Headers({
     "Access-Control-Allow-Origin": env.WEB_ORIGIN,
     "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization",
     Vary: "Origin",
   });
 }

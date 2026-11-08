@@ -1,9 +1,10 @@
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { type EventName, startCheckout, track } from "./api";
+import { type EventName, saveProfile, startCheckout, track } from "./api";
 import AuthButtons from "./AuthButtons";
 import { PER_APP_BY_HAND, TimeBars } from "./HowItWorks";
 import { clearPrefill, readDraft, readPrefill, saveDraft } from "./prefill";
+import { setSessionEmail } from "./session";
 import { ALL_ROLES, PROGRAMS, ROLES, SCHOOLS, suggestedRoles } from "./lists";
 import Suggest from "./Suggest";
 
@@ -14,6 +15,7 @@ type Step =
   | "school"
   | "program"
   | "year"
+  | "heard"
   | "experience"
   | "applied"
   | "struggle"
@@ -36,6 +38,7 @@ const QUESTIONS: { key: Step; section: string }[] = [
   { key: "school", section: "About you" },
   { key: "program", section: "About you" },
   { key: "year", section: "About you" },
+  { key: "heard", section: "About you" },
   { key: "experience", section: "Your story" },
   { key: "applied", section: "Your story" },
   { key: "struggle", section: "Your story" },
@@ -65,6 +68,9 @@ type Choice = { label: string; note?: string };
 const asOptions = (labels: string[]): Choice[] => labels.map((label) => ({ label }));
 
 const LEVELS = ["1st year", "2nd year", "3rd year", "4th year", "5th year or later", "Graduate student"];
+
+// Where students found us. Shown to us on the admin dashboard, so we know which channel to push.
+const HEARD = ["TikTok", "Instagram", "Reddit", "A friend", "My school", "Google search", "LinkedIn", "Somewhere else"];
 
 const NO_EXPERIENCE = "None yet";
 const EXPERIENCE: Choice[] = [
@@ -105,7 +111,7 @@ const PLACES = ["Remote", ANYWHERE, "Toronto", "Waterloo", "Vancouver", "Montré
 // Price per week, shown under each plan (playbook chapter 07). 3 terms or 12 months a year, 52 weeks a year.
 const PER_WEEK = { term: (45 * 3) / 52, monthly: (25 * 12) / 52 };
 
-type Match = { firm: string; job: string; role: string; fit: number; why: string; hidden: boolean };
+export type Match = { firm: string; job: string; role: string; fit: number; why: string; hidden: boolean };
 
 // Puts just the job name in italics inside a sentence, like "Fits your *Policy / Government* goal."
 const withJob = (text: string, job: string) =>
@@ -118,7 +124,7 @@ const cityOf = (where: string) => {
 };
 
 // Up to six example matches, spread across the job areas the student picked.
-function exampleMatches(jobs: string[], where: string, program: string): Match[] {
+export function exampleMatches(jobs: string[], where: string, program: string): Match[] {
   const place = cityOf(where);
   const out: Match[] = [];
   for (let round = 0; round < 3 && out.length < 6; round++) {
@@ -190,6 +196,7 @@ export default function Onboarding() {
   const [level, setLevel] = useState(text(draft?.level));
   const [experience, setExperience] = useState(text(draft?.experience));
   const [applied, setApplied] = useState(text(draft?.applied));
+  const [heard, setHeard] = useState(text(draft?.heard));
   const [struggles, setStruggles] = useState<string[]>(list(draft?.struggles));
   const [goals, setGoals] = useState<string[]>(list(draft?.goals));
   const [jobs, setJobs] = useState<string[]>(list(draft?.jobs));
@@ -380,6 +387,7 @@ export default function Onboarding() {
     school: school.trim() !== "",
     program: program.trim() !== "",
     year: level !== "",
+    heard: heard !== "",
     experience: experience !== "",
     applied: applied !== "",
     struggle: struggles.length > 0,
@@ -518,6 +526,15 @@ export default function Onboarding() {
               <p className="lead small">So we match you with roles at your level.</p>
               <Options label="Year of study" options={asOptions(LEVELS)} picked={[level]} onPick={pickOne(setLevel)} two />
               <Nav back={back} disabled={level === ""} />
+            </form>
+          )}
+
+          {step === "heard" && (
+            <form className="stack" onSubmit={onSubmit(heard !== "")}>
+              <h1 className="authtitle">How did you hear about Workterm?</h1>
+              <p className="lead small">One tap. It helps us reach more students like you.</p>
+              <Options label="How you heard about us" options={asOptions(HEARD)} picked={[heard]} onPick={pickOne(setHeard)} two />
+              <Nav back={back} disabled={heard === ""} />
             </form>
           )}
 
@@ -811,10 +828,14 @@ export default function Onboarding() {
                 track("trial_start_click");
                 setPaying(true);
                 setPayError("");
+                // Save the answers first, so the dashboard and the admin numbers have them. A failure here must not block payment.
+                const email = payEmail.trim().toLowerCase();
+                await saveProfile({ email, name, school, program, level, experience, applied, struggles, goals, jobs, term, place: where, heard_from: heard });
                 const result = await startCheckout(payEmail, plan);
                 if ("url" in result) {
+                  setSessionEmail(email);
                   // If they cancel on Stripe's page, sign-up opens here again with these answers.
-                  saveDraft({ name, school, program, level, experience, applied, struggles, goals, jobs, term, where, plan, payEmail });
+                  saveDraft({ name, school, program, level, experience, applied, heard, struggles, goals, jobs, term, where, plan, payEmail });
                   window.location.href = result.url; // off to Stripe's payment page
                   return;
                 }
@@ -947,11 +968,8 @@ export default function Onboarding() {
                   </button>
                 </li>
               </ul>
-              <p className="notice">
-                Preview only: nothing was saved. Resume rating, job matches and tailored resumes open when Workterm opens.
-              </p>
-              <a className="btn" href="#/">
-                Back to home
+              <a className="btn" href="#/dashboard">
+                Open my dashboard
               </a>
             </div>
           )}
