@@ -15,3 +15,6 @@ Parked ideas. Not part of v1 or v1.1. Plan for v1 and v1.1 is in `docs/core-feat
 - In-app "Manage subscription" button (Stripe customer portal), once sign-in exists
 - Two-sided marketplace: companies post co-ops to Workterm for free (see docs/strategy.md)
 - Annual plan: one yearly price below 3 terms (about $120). Add once students renew for 2+ terms; needs a new Stripe price and an update to decision 0005
+- Onboarding: send the "what makes it hard" answers as anonymous events, so we learn which pains are most common and use them as video hooks (check rule 7 first)
+- Onboarding: real student quotes on the "You're not alone" screen, once we have real users who agree to be quoted
+- Onboarding: skip the name, school and program cards when the home page form already filled them, if testing shows students find the repeat annoying

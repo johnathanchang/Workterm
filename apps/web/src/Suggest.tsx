@@ -32,12 +32,14 @@ export default function Suggest({
   value,
   onChange,
   placeholder,
+  autoFocus,
 }: {
   label: string;
   options: string[];
   value: string;
   onChange: (v: string) => void;
   placeholder: string;
+  autoFocus?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(-1);
@@ -72,6 +74,7 @@ export default function Suggest({
         placeholder={placeholder}
         maxLength={100}
         required
+        autoFocus={autoFocus}
         onChange={(e) => {
           onChange(e.target.value);
           setOpen(true);
