@@ -4,6 +4,7 @@ import Competitor, { RIVALS } from "./Competitors";
 import Home from "./Home";
 import Login from "./Login";
 import Onboarding from "./Onboarding";
+import { clearDraft } from "./prefill";
 import Privacy from "./Privacy";
 import Refund from "./Refund";
 import Terms from "./Terms";
@@ -41,20 +42,34 @@ function goToSection(e: React.MouseEvent, id: string) {
   setTimeout(scroll, 80);
 }
 
-// After Stripe, the student lands back here with ?checkout=success or ?checkout=cancelled.
-function useCheckoutResult(): "success" | "cancelled" | null {
-  const [result, setResult] = useState<"success" | "cancelled" | null>(() => {
-    const value = new URLSearchParams(window.location.search).get("checkout");
-    return value === "success" || value === "cancelled" ? value : null;
+// After Stripe, the student lands back here with ?checkout=success&plan=term (or monthly), or ?checkout=cancelled.
+type CheckoutResult = { status: "success" | "cancelled"; plan: "monthly" | "term" | null };
+
+function useCheckoutResult(): CheckoutResult | null {
+  const [result, setResult] = useState<CheckoutResult | null>(() => {
+    const params = new URLSearchParams(window.location.search);
+    const status = params.get("checkout");
+    const plan = params.get("plan");
+    if (status !== "success" && status !== "cancelled") return null;
+    return { status, plan: plan === "monthly" || plan === "term" ? plan : null };
   });
   useEffect(() => {
     if (!result) return;
-    // Drop the flag from the address bar so a reload does not show the banner again, and hide it after a while.
-    history.replaceState(null, "", window.location.pathname + window.location.hash);
+    // Drop the flags from the address bar so a reload does not show the banner again, and hide it after a while.
+    // The history entry keeps its state, so sign-up can still step back after a cancelled payment.
+    history.replaceState(history.state, "", window.location.pathname + window.location.hash);
+    // Paid: the saved sign-up answers are no longer needed. Cancelled: sign-up has already read them.
+    clearDraft();
     const timer = setTimeout(() => setResult(null), 8000);
     return () => clearTimeout(timer);
   }, [result]);
   return result;
+}
+
+function checkoutMessage({ status, plan }: CheckoutResult): string {
+  if (status === "cancelled") return "Payment cancelled. You were not charged. Your answers are saved.";
+  if (plan === "monthly") return "Payment received. Thank you! Pro Monthly is unlocked. It renews every month until you cancel.";
+  return "Payment received. Thank you! Pro is unlocked for your co-op term. It renews every 4 months until you cancel.";
 }
 
 export default function App() {
@@ -64,10 +79,8 @@ export default function App() {
   return (
     <>
       {checkout && (
-        <p className={`checkout-banner ${checkout}`} role="status">
-          {checkout === "success"
-            ? "Payment received. Thank you! Pro is unlocked for your co-op term."
-            : "Payment cancelled. You were not charged."}
+        <p className={`checkout-banner ${checkout.status}`} role="status">
+          {checkoutMessage(checkout)}
         </p>
       )}
       <header className="bar">

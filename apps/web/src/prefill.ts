@@ -30,3 +30,50 @@ export function clearPrefill(): void {
     // Nothing to clear.
   }
 }
+
+// Sign-up answers, saved just before the student leaves for Stripe. If they cancel the payment, sign-up reads
+// them back and opens the plan picker, so they do not answer every card again. Same rules as above: this tab only,
+// never in the URL. The resume file is not saved.
+const DRAFT_KEY = "workterm.draft";
+
+export type Draft = {
+  name: string;
+  school: string;
+  program: string;
+  level: string;
+  experience: string;
+  applied: string;
+  struggles: string[];
+  goals: string[];
+  jobs: string[];
+  term: string;
+  where: string;
+  plan: "monthly" | "term";
+  payEmail: string;
+};
+
+export function saveDraft(d: Draft): void {
+  try {
+    sessionStorage.setItem(DRAFT_KEY, JSON.stringify(d));
+  } catch {
+    // Storage blocked. A cancelled payment then starts sign-up fresh.
+  }
+}
+
+export function readDraft(): Partial<Draft> | null {
+  try {
+    const raw = sessionStorage.getItem(DRAFT_KEY);
+    const d = raw ? (JSON.parse(raw) as Partial<Draft>) : null;
+    return typeof d === "object" && d ? d : null;
+  } catch {
+    return null;
+  }
+}
+
+export function clearDraft(): void {
+  try {
+    sessionStorage.removeItem(DRAFT_KEY);
+  } catch {
+    // Nothing to clear.
+  }
+}

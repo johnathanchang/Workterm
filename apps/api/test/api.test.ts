@@ -57,6 +57,7 @@ test("bad email and bad body are rejected", async () => {
 test("events only accept known names", async () => {
   expect((await post("/events", { name: "page_view" })).status).toBe(201);
   expect((await post("/events", { name: "firm_matched" })).status).toBe(201);
+  expect((await post("/events", { name: "onboarding_step", source: "struggle" })).status).toBe(201);
   expect((await post("/events", { name: "hack" })).status).toBe(400);
 });
 
@@ -89,9 +90,16 @@ test("checkout creates a subscription session for the chosen plan", async () => 
     expect(form.get("mode")).toBe("subscription");
     expect(form.get("line_items[0][price]")).toBe("price_month");
     expect(form.get("subscription_data[metadata][email]")).toBe("student@mac.ca");
+    expect(form.get("subscription_data[metadata][plan]")).toBe("monthly");
+    expect(form.get("success_url")).toBe("http://localhost:5173/?checkout=success&plan=monthly#/");
+    expect(form.get("cancel_url")).toBe("http://localhost:5173/?checkout=cancelled#/signup");
 
-    await post("/checkout", { email: "a@b.ca", plan: "term" });
-    expect(new URLSearchParams(sent!.body).get("line_items[0][price]")).toBe("price_term");
+    const termRes = await post("/checkout", { email: "a@b.ca", plan: "term" });
+    expect(termRes.status).toBe(200);
+    const termForm = new URLSearchParams(sent!.body);
+    expect(termForm.get("line_items[0][price]")).toBe("price_term");
+    expect(termForm.get("subscription_data[metadata][plan]")).toBe("term");
+    expect(termForm.get("success_url")).toBe("http://localhost:5173/?checkout=success&plan=term#/");
 
     const row = await env.DB.prepare("SELECT COUNT(*) AS n FROM events WHERE name = 'checkout_started'").first();
     expect(row.n).toBe(2);
