@@ -24,6 +24,7 @@ const ALLOWED_EVENTS = new Set([
   "waitlist_signup_click",
   // Onboarding funnel (rule 10).
   "onboarding_started",
+  "onboarding_step", // source is the screen's name, so we can see where students drop off
   "firm_matched",
   "account_view",
   "paywall_view",
@@ -148,7 +149,9 @@ async function startCheckout(request: Request, env: Env): Promise<Response> {
     // Copied onto the subscription, so every later subscription event says whose it is.
     "subscription_data[metadata][email]": email,
     "subscription_data[metadata][plan]": plan,
-    success_url: `${env.WEB_ORIGIN}/?checkout=success#/`,
+    // The plan comes back in the address so the thank-you banner can name it.
+    success_url: `${env.WEB_ORIGIN}/?checkout=success&plan=${plan}#/`,
+    // Sign-up keeps the student's answers in the tab, so a cancel lands back on the plan picker.
     cancel_url: `${env.WEB_ORIGIN}/?checkout=cancelled#/signup`,
   });
   const stripeRes = await fetch("https://api.stripe.com/v1/checkout/sessions", {

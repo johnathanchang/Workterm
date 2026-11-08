@@ -151,10 +151,33 @@ const TASKS = [
   { task: "Track replies and follow up", byHand: 5, us: "Reply alerts and reminders" },
 ];
 const APPLICATIONS = 50;
-const PER_APP_BY_HAND = TASKS.reduce((sum, t) => sum + t.byHand, 0); // 45 minutes
+export const PER_APP_BY_HAND = TASKS.reduce((sum, t) => sum + t.byHand, 0); // 45 minutes
 const PER_APP_US = 2; // minutes to read and approve
 const HOURS_BY_HAND = Math.round((PER_APP_BY_HAND * APPLICATIONS) / 60); // about 38
 const HOURS_US = Math.round((PER_APP_US * APPLICATIONS) / 60); // about 2
+
+// The two bars: 50 applications by hand versus with Workterm. Also shown during sign-up.
+export function TimeBars() {
+  return (
+    <div className="time-bars" aria-label={`${APPLICATIONS} applications: about ${HOURS_BY_HAND} hours manual, about ${HOURS_US} hours with Workterm`}>
+      <p className="time-bars-title">{APPLICATIONS} applications</p>
+      <div className="time-bar">
+        <span className="time-bar-label">Manual</span>
+        <span className="time-bar-track">
+          <span className="time-bar-fill slow" style={{ width: "100%" }} />
+        </span>
+        <strong>about {HOURS_BY_HAND} hours</strong>
+      </div>
+      <div className="time-bar">
+        <span className="time-bar-label">With Workterm</span>
+        <span className="time-bar-track">
+          <span className="time-bar-fill fast" style={{ width: `${(HOURS_US / HOURS_BY_HAND) * 100}%` }} />
+        </span>
+        <strong>about {HOURS_US} hours</strong>
+      </div>
+    </div>
+  );
+}
 
 export function Compare() {
   return (
@@ -185,23 +208,7 @@ export function Compare() {
           </span>
         </div>
 
-        <div className="time-bars" aria-label={`${APPLICATIONS} applications: about ${HOURS_BY_HAND} hours manual, about ${HOURS_US} hours with Workterm`}>
-          <p className="time-bars-title">{APPLICATIONS} applications</p>
-          <div className="time-bar">
-            <span className="time-bar-label">Manual</span>
-            <span className="time-bar-track">
-              <span className="time-bar-fill slow" style={{ width: "100%" }} />
-            </span>
-            <strong>about {HOURS_BY_HAND} hours</strong>
-          </div>
-          <div className="time-bar">
-            <span className="time-bar-label">With Workterm</span>
-            <span className="time-bar-track">
-              <span className="time-bar-fill fast" style={{ width: `${(HOURS_US / HOURS_BY_HAND) * 100}%` }} />
-            </span>
-            <strong>about {HOURS_US} hours</strong>
-          </div>
-        </div>
+        <TimeBars />
       </div>
       <p className="versus-note">Our estimates. Your times will vary. Workterm never sends anything until you approve it.</p>
 
