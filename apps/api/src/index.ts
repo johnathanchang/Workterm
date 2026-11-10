@@ -1,7 +1,9 @@
 // apps/api/src/index.ts: the whole API as one fetch handler. No router framework.
+import { looksLikePdf, MAX_RESUME_BYTES, rateResume, readPdfText } from "./resume";
 
 interface Env {
   DB: D1Database;
+  RESUMES: R2Bucket; // resume PDFs
   APP_ENV: string;
   WEB_ORIGIN: string;
   // Secrets. Locally, put them in apps/api/.dev.vars (gitignored). Test mode keys only for now.
@@ -37,6 +39,10 @@ const ALLOWED_EVENTS = new Set([
   "dashboard_view",
   "profile_edited",
   "assistant_message",
+  // Resume (core feature 2).
+  "resume_uploaded",
+  "resume_rated",
+  "resume_deleted",
 ]);
 
 export default {
@@ -79,6 +85,18 @@ export default {
           break;
         case "POST /billing-portal":
           response = await billingPortal(request, env);
+          break;
+        case "POST /resume":
+          response = await uploadResume(request, env);
+          break;
+        case "GET /resume":
+          response = await getResume(url, env);
+          break;
+        case "DELETE /resume":
+          response = await deleteResume(url, env);
+          break;
+        case "POST /resume/rate":
+          response = await rateStoredResume(request, env);
           break;
         case "GET /admin/overview":
           response = await adminOverview(request, env);
@@ -377,8 +395,14 @@ async function getMe(url: URL, env: Env): Promise<Response> {
     .bind(email, Date.now())
     .first<{ plan: string; expires_at: number }>();
 
+  const resume = await env.DB
+    .prepare("SELECT filename, size, uploaded_at FROM resumes WHERE email = ?")
+    .bind(email)
+    .first<{ filename: string; size: number; uploaded_at: number }>();
+
   return Response.json({
     email,
+    resume,
     profile: profile
       ? {
           name: profile.name,
@@ -398,6 +422,87 @@ async function getMe(url: URL, env: Env): Promise<Response> {
     plan: ent?.plan ?? null,
     renews_at: ent?.expires_at ?? null,
   });
+}
+
+const emailParam = (value: unknown): string | null => {
+  const email = cleanText(value, 254)?.toLowerCase();
+  return email && EMAIL_PATTERN.test(email) ? email : null;
+};
+
+// Saves one resume per student: the PDF in R2, its text in D1. A new upload replaces the old one.
+async function uploadResume(request: Request, env: Env): Promise<Response> {
+  if (!emailLookupAllowed(env)) return Response.json({ error: "not_available" }, { status: 403 });
+  const declared = Number(request.headers.get("content-length") ?? 0);
+  if (declared > MAX_RESUME_BYTES + 10_000) return Response.json({ error: "too_big" }, { status: 413 });
+
+  let form: FormData;
+  try {
+    form = await request.formData();
+  } catch {
+    return Response.json({ error: "bad_request" }, { status: 400 });
+  }
+  const email = emailParam(form.get("email"));
+  const file = form.get("file") as unknown as File | string | null;
+  if (!email || !file || typeof file === "string") return Response.json({ error: "bad_request" }, { status: 400 });
+  if (file.size > MAX_RESUME_BYTES) return Response.json({ error: "too_big" }, { status: 413 });
+
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  if (!looksLikePdf(bytes)) return Response.json({ error: "not_pdf" }, { status: 415 });
+  const text = await readPdfText(bytes);
+  if (!text) return Response.json({ error: "no_text" }, { status: 422 });
+
+  const old = await env.DB.prepare("SELECT r2_key FROM resumes WHERE email = ?").bind(email).first<{ r2_key: string }>();
+  const key = `resumes/${crypto.randomUUID()}.pdf`;
+  await env.RESUMES.put(key, bytes, { httpMetadata: { contentType: "application/pdf" } });
+  const filename = (cleanText(file.name, 200) ?? "resume.pdf").replace(/[^\w .()-]/g, "_");
+  const now = Date.now();
+  await env.DB
+    .prepare(
+      `INSERT INTO resumes (email, filename, size, r2_key, text, uploaded_at) VALUES (?, ?, ?, ?, ?, ?)
+       ON CONFLICT(email) DO UPDATE SET filename = excluded.filename, size = excluded.size, r2_key = excluded.r2_key,
+         text = excluded.text, uploaded_at = excluded.uploaded_at`,
+    )
+    .bind(email, filename, bytes.length, key, text, now)
+    .run();
+  if (old) await env.RESUMES.delete(old.r2_key);
+
+  return Response.json({ ok: true, resume: { filename, size: bytes.length, uploaded_at: now } }, { status: 201 });
+}
+
+async function getResume(url: URL, env: Env): Promise<Response> {
+  if (!emailLookupAllowed(env)) return Response.json({ error: "not_available" }, { status: 403 });
+  const email = emailParam(url.searchParams.get("email"));
+  if (!email) return Response.json({ error: "invalid_email" }, { status: 400 });
+  const resume = await env.DB
+    .prepare("SELECT filename, size, uploaded_at FROM resumes WHERE email = ?")
+    .bind(email)
+    .first<{ filename: string; size: number; uploaded_at: number }>();
+  return Response.json({ resume });
+}
+
+// The student can always remove their resume (rule 7). The file and the text both go.
+async function deleteResume(url: URL, env: Env): Promise<Response> {
+  if (!emailLookupAllowed(env)) return Response.json({ error: "not_available" }, { status: 403 });
+  const email = emailParam(url.searchParams.get("email"));
+  if (!email) return Response.json({ error: "invalid_email" }, { status: 400 });
+  const row = await env.DB.prepare("SELECT r2_key FROM resumes WHERE email = ?").bind(email).first<{ r2_key: string }>();
+  if (row) {
+    await env.RESUMES.delete(row.r2_key);
+    await env.DB.prepare("DELETE FROM resumes WHERE email = ?").bind(email).run();
+  }
+  return Response.json({ ok: true });
+}
+
+// Rates the saved resume against the student's target roles. Rule-based for now (see resume.ts).
+async function rateStoredResume(request: Request, env: Env): Promise<Response> {
+  if (!emailLookupAllowed(env)) return Response.json({ error: "not_available" }, { status: 403 });
+  const body = await readJson(request);
+  const email = emailParam(body?.email);
+  if (!email) return Response.json({ error: "invalid_email" }, { status: 400 });
+  const resume = await env.DB.prepare("SELECT text FROM resumes WHERE email = ?").bind(email).first<{ text: string }>();
+  if (!resume) return Response.json({ error: "no_resume" }, { status: 404 });
+  const profile = await env.DB.prepare("SELECT jobs FROM profiles WHERE email = ?").bind(email).first<{ jobs: string }>();
+  return Response.json({ rating: rateResume(resume.text, parseList(profile?.jobs ?? null)) });
 }
 
 // Opens Stripe's billing portal, where a student updates their card or cancels.
@@ -521,7 +626,7 @@ function cleanText(value: unknown, maxLength: number): string | null {
 function corsHeaders(env: Env): Headers {
   return new Headers({
     "Access-Control-Allow-Origin": env.WEB_ORIGIN,
-    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+    "Access-Control-Allow-Methods": "GET, POST, DELETE, OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type, Authorization",
     Vary: "Origin",
   });

@@ -15,6 +15,8 @@
   "d1_databases": [
     { "binding": "DB", "database_name": "workterm-db-dev", "database_id": "local-dev-placeholder", "migrations_dir": "migrations" }
   ],
+  // Resume files. Locally wrangler keeps a copy on disk.
+  "r2_buckets": [{ "binding": "RESUMES", "bucket_name": "workterm-resumes-dev" }],
   "vars": { "APP_ENV": "dev", "WEB_ORIGIN": "http://localhost:5173" },
 
   "env": {
@@ -23,6 +25,7 @@
       "d1_databases": [
         { "binding": "DB", "database_name": "workterm-db-staging", "database_id": "<paste-staging-id>", "migrations_dir": "migrations" }
       ],
+      "r2_buckets": [{ "binding": "RESUMES", "bucket_name": "workterm-resumes-staging" }],
       "vars": { "APP_ENV": "staging", "WEB_ORIGIN": "https://staging.<domain>" }
     },
     "production": {
@@ -30,6 +33,7 @@
       "d1_databases": [
         { "binding": "DB", "database_name": "workterm-db", "database_id": "<paste-production-id>", "migrations_dir": "migrations" }
       ],
+      "r2_buckets": [{ "binding": "RESUMES", "bucket_name": "workterm-resumes" }],
       "vars": { "APP_ENV": "production", "WEB_ORIGIN": "https://<domain>" }
     }
   }

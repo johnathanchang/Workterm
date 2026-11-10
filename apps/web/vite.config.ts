@@ -16,6 +16,7 @@ export default defineConfig({
       "/checkout": api,
       "/me": api,
       "/profile": api,
+      "/resume": api,
       "/billing-portal": api,
       "/admin": api,
     },

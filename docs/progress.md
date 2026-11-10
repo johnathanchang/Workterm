@@ -56,6 +56,7 @@ We are in Phase 0, before Gate A. Web first (decision 0001), so iOS and Android 
 ### Phase 6: Web app
 
 - [x] Basic dashboards (decision 0008): student dashboard and welcome page, admin dashboard with funnel, schools, programs, years and "how they found us". Onboarding saves a profile. Checked in the browser; `bun run check && bun test` pass.
+- [x] Resume upload and early score (core feature 2): PDF to R2, text to D1, rule-based rating against the student's roles, delete button. Dashboard Resume page. Tests pass. AI rating and tailoring wait for the OpenRouter key.
 - [ ] **[HUMAN]** Create Google and Microsoft sign-in apps and send the keys through `.dev.vars` (agent gives click-by-click steps), then wire Better Auth and remove the email lookup.
 
 - [ ] **[AGENT]** Design tokens first (chapter 09), then landing page, core feature, settings (with account deletion), Stripe checkout in **test mode**.

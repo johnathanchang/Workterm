@@ -2872,3 +2872,134 @@ main.dash {
     align-items: flex-start;
   }
 }
+
+/* Resume page: file row, score ring, role fit bars, fix list. */
+.resume-file {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.resume-file strong,
+.resume-file small {
+  display: block;
+}
+
+.resume-file small,
+.small-note {
+  color: var(--muted);
+}
+
+.small-note {
+  font-size: 0.85rem;
+}
+
+.file-icon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 52px;
+  border-radius: 8px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+.score-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.score {
+  flex: none;
+  display: grid;
+  place-content: center;
+  text-align: center;
+  width: 92px;
+  height: 92px;
+  border-radius: 50%;
+  border: 6px solid var(--line);
+}
+
+.score strong {
+  font-size: 2rem;
+  line-height: 1;
+}
+
+.score span {
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.score.good { border-color: #1d6b2f; }
+.score.ok { border-color: #d99a00; }
+.score.low { border-color: #b3001b; }
+
+.sub-h {
+  margin: 12px 0 0;
+  font-size: 0.95rem;
+}
+
+.fit-list,
+.fix-list,
+.good-list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.fix-list {
+  counter-reset: fix;
+}
+
+.fix-list li {
+  counter-increment: fix;
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.fix-list li::before {
+  content: counter(fix);
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.good-list li::before {
+  content: "✓ ";
+  color: #1d6b2f;
+  font-weight: 700;
+}
+
+.fit-list li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(60px, 120px) 3ch;
+  gap: 10px;
+  align-items: center;
+}
+
+.fit-bar {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--line);
+  overflow: hidden;
+}
+
+.fit-bar span {
+  display: block;
+  height: 100%;
+  background: #1d6b2f;
+}

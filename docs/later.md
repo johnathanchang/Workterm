@@ -22,3 +22,5 @@ Parked ideas. Not part of v1 or v1.1. Plan for v1 and v1.1 is in `docs/core-feat
 - Customer dashboard: live "Ask Workterm" helper (streamed, logged with cost), resume editor and tailoring, application tracker from real events
 - Onboarding: a longer, more visual flow that looks different from other apps (low priority); redo the screen before pricing
 - Footers: polish (low priority)
+
+- Resume: accept Word (.docx) files, and wire the onboarding resume step to the same upload once sign-in exists. Swap the rule-based rating in `apps/api/src/resume.ts` for the AI rating (stream it, log `ai_call` with cost). Add upload rate limits.

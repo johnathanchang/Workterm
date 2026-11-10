@@ -16,7 +16,7 @@ beforeAll(async () => {
   dispose = proxy.dispose;
   // Tests never use the real keys in .dev.vars. Each Stripe test sets fake ones and mocks fetch.
   for (const k of Object.keys(env)) if (k.startsWith("STRIPE_")) delete env[k];
-  for (const file of ["0001_waitlist.sql", "0002_entitlements.sql", "0003_subscriptions.sql", "0004_profiles.sql"]) {
+  for (const file of ["0001_waitlist.sql", "0002_entitlements.sql", "0003_subscriptions.sql", "0004_profiles.sql", "0005_resumes.sql"]) {
     const sql = await Bun.file(join(api, "migrations", file)).text();
     // exec wants one statement per line, so strip comments and put each statement on its own line.
     await env.DB.exec(sql.replace(/--.*$/gm, "").replace(/\s+/g, " ").replace(/; /g, ";\n"));
@@ -201,4 +201,75 @@ test("admin overview needs the key, then returns the numbers", async () => {
   expect(data.recent[0].email).toBe("ada@mac.ca");
   delete env.ADMIN_KEY;
   expect((await call("/admin/overview", { headers: { Authorization: "Bearer test-admin-key" } })).status).toBe(503);
+});
+
+// A tiny real PDF with one page of text, built by hand so the test needs no files.
+function makePdf(lines: string[]): Uint8Array {
+  const stream = "BT /F1 11 Tf 40 760 Td 14 TL " + lines.map((l) => `(${l.replace(/[()\\]/g, "")}) Tj T*`).join(" ") + " ET";
+  const objs = [
+    "<< /Type /Catalog /Pages 2 0 R >>",
+    "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+    "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>",
+    `<< /Length ${stream.length} >>\nstream\n${stream}\nendstream`,
+    "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
+  ];
+  let out = "%PDF-1.4\n";
+  const offsets: number[] = [];
+  objs.forEach((o, i) => {
+    offsets.push(out.length);
+    out += `${i + 1} 0 obj\n${o}\nendobj\n`;
+  });
+  const xref = out.length;
+  out += `xref\n0 ${objs.length + 1}\n0000000000 65535 f \n` + offsets.map((o) => `${String(o).padStart(10, "0")} 00000 n \n`).join("");
+  out += `trailer\n<< /Size ${objs.length + 1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF`;
+  return new TextEncoder().encode(out);
+}
+
+const RESUME_LINES = [
+  "Alan Smith alan@school.ca",
+  "Education University of Calgary Biomedical Engineering 2027",
+  "Experience Research Assistant Led a clinical lab study with 40 patients and improved data entry time by 30%",
+  "Built a SQL dashboard in Python and Excel for the lab team, presented results to 25 staff",
+  "Projects Designed a low cost patient monitor, organized a team of 5 students",
+  "Skills Python SQL Excel research analysis",
+];
+
+const upload = (email: string, bytes: Uint8Array, name = "alan.pdf") => {
+  const form = new FormData();
+  form.set("email", email);
+  form.set("file", new File([bytes], name, { type: "application/pdf" }));
+  return call("/resume", { method: "POST", body: form });
+};
+
+test("resume: upload, read, rate, replace and delete", async () => {
+  const email = "alan@school.ca";
+  await post("/profile", { email, name: "Alan", jobs: ["Healthcare / Clinical", "Data Analytics"] });
+
+  const up = await upload(email, makePdf(RESUME_LINES));
+  expect(up.status).toBe(201);
+  expect((await up.json() as any).resume.filename).toBe("alan.pdf");
+
+  const me = await (await call(`/me?email=${email}`)).json() as any;
+  expect(me.resume.filename).toBe("alan.pdf");
+
+  const rated = await (await post("/resume/rate", { email })).json() as any;
+  expect(rated.rating.score).toBeGreaterThan(30);
+  expect(rated.rating.roles.length).toBe(2);
+  expect(rated.rating.gaps.length).toBeLessThanOrEqual(3);
+
+  // A second upload replaces the first: still one file in storage.
+  await upload(email, makePdf(RESUME_LINES), "alan2.pdf");
+  expect(((await (await call(`/resume?email=${email}`)).json()) as any).resume.filename).toBe("alan2.pdf");
+  expect((await env.RESUMES.list()).objects.length).toBe(1);
+
+  expect((await call(`/resume?email=${email}`, { method: "DELETE" })).status).toBe(200);
+  expect(((await (await call(`/resume?email=${email}`)).json()) as any).resume).toBeNull();
+  expect((await env.RESUMES.list()).objects.length).toBe(0);
+  expect((await post("/resume/rate", { email })).status).toBe(404);
+});
+
+test("resume: rejects files that are not a readable PDF", async () => {
+  expect((await upload("a@school.ca", new TextEncoder().encode("hello, not a pdf"))).status).toBe(415);
+  expect((await upload("a@school.ca", makePdf(["Hi"]))).status).toBe(422);
+  expect((await upload("not-an-email", makePdf(RESUME_LINES))).status).toBe(400);
 });

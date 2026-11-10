@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useRef, useState } from "react";
-import { getMe, type Me, openBillingPortal, type Profile, saveProfile, track } from "./api";
+import { deleteResume, getMe, type Me, openBillingPortal, type Profile, type Rating, rateResume, type ResumeInfo, saveProfile, track, uploadResume } from "./api";
 import { ALL_ROLES } from "./lists";
 import { exampleMatches } from "./Onboarding";
 import { clearSession, getSessionEmail, setSessionEmail } from "./session";
@@ -144,7 +144,7 @@ export default function Dashboard({ welcome }: { welcome: boolean }) {
             </>
           )}
           {tab === "matches" && (profile ? <Matches profile={profile} limit={8} /> : <Empty text="Finish onboarding to see your matches." />)}
-          {tab === "resume" && <ResumeCard />}
+          {tab === "resume" && <ResumeCard email={me.email} resume={me.resume} onChange={(r) => setMe({ ...me, resume: r })} />}
           {tab === "applications" && <Stats />}
           {tab === "assistant" && <Assistant profile={profile} />}
           {tab === "preferences" &&
@@ -204,7 +204,7 @@ function GettingStarted({ me, go }: { me: Me; go: (t: Tab) => void }) {
   const steps: { done: boolean; label: string; note: string; tab?: Tab }[] = [
     { done: me.pro, label: "Payment confirmed", note: me.pro ? `${planName(me.plan)} is on.` : "Confirming with Stripe, this takes a few seconds…", tab: "plan" },
     { done: Boolean(me.profile?.jobs.length), label: "Your roles are saved", note: me.profile?.jobs.join(", ") || "Pick your roles in Preferences.", tab: "preferences" },
-    { done: false, label: "Add your resume", note: "Coming next. We will rate it against each role.", tab: "resume" },
+    { done: Boolean(me.resume), label: "Add your resume", note: me.resume ? me.resume.filename : "Upload a PDF. We rate it against each of your roles.", tab: "resume" },
     { done: false, label: "Connect Gmail or Outlook", note: "Coming next. Emails go from your own inbox, only after you approve." },
   ];
   const doneCount = steps.filter((s) => s.done).length;
@@ -417,26 +417,167 @@ function Matches({ profile, limit, onMore }: { profile: Profile; limit: number; 
   );
 }
 
-// The resume stays in this browser for now. Rating and tailoring arrive with the full app.
-function ResumeCard() {
-  const [file, setFile] = useState<File | null>(null);
+const RESUME_PROBLEMS = {
+  not_pdf: "That file is not a PDF. Save your resume as a PDF and try again.",
+  no_text: "We could not read text in that PDF. It may be a scan or a photo. Export it from Word or Google Docs instead.",
+  too_big: "That file is over 5 MB. Try a smaller PDF.",
+  error: "Something went wrong. Please try again.",
+} as const;
+
+const kb = (bytes: number) => (bytes < 1024 * 1024 ? `${Math.max(1, Math.round(bytes / 1024))} KB` : `${(bytes / 1024 / 1024).toFixed(1)} MB`);
+
+// One PDF per student. It is stored for them and rated against their roles (rule-based for now, AI later).
+function ResumeCard({ email, resume, onChange }: { email: string; resume: ResumeInfo | null; onChange: (r: ResumeInfo | null) => void }) {
   const input = useRef<HTMLInputElement>(null);
+  const [busy, setBusy] = useState<"" | "uploading" | "rating" | "deleting">("");
+  const [problem, setProblem] = useState("");
+  const [rating, setRating] = useState<Rating | null>(null);
+
+  // Rate whenever there is a resume, so the score is there when the student opens the page.
+  useEffect(() => {
+    if (!resume) return setRating(null);
+    let cancelled = false;
+    setBusy((b) => b || "rating");
+    rateResume(email).then((r) => {
+      if (cancelled) return;
+      setRating(r);
+      setBusy((b) => (b === "rating" ? "" : b));
+      if (r) track("resume_rated");
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [email, resume?.uploaded_at]);
+
+  async function pick(file: File | undefined) {
+    if (!file) return;
+    setProblem("");
+    setBusy("uploading");
+    const result = await uploadResume(email, file);
+    setBusy("");
+    if ("error" in result) return setProblem(RESUME_PROBLEMS[result.error]);
+    track("resume_uploaded");
+    onChange(result.resume);
+  }
+
+  async function remove() {
+    if (!window.confirm("Delete your resume from Workterm? You can upload it again any time.")) return;
+    setBusy("deleting");
+    const ok = await deleteResume(email);
+    setBusy("");
+    if (!ok) return setProblem(RESUME_PROBLEMS.error);
+    track("resume_deleted");
+    onChange(null);
+  }
+
   return (
-    <section className="card dash-card">
-      <h2>Your resume</h2>
-      <p className="dash-sub">{file ? file.name : "No resume added yet."}</p>
-      <input
-        ref={input}
-        type="file"
-        accept=".pdf,.doc,.docx"
-        hidden
-        onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-      />
-      <button type="button" className="ghost-btn" onClick={() => input.current?.click()}>
-        {file ? "Replace resume" : "Add resume"}
-      </button>
-      <p className="notice">Preview: the file stays in your browser. Rating and editing arrive with the full app.</p>
-    </section>
+    <>
+      <section className="card dash-card">
+        <h2>Your resume</h2>
+        <input
+          ref={input}
+          type="file"
+          accept="application/pdf,.pdf"
+          hidden
+          onChange={(e) => {
+            pick(e.target.files?.[0]);
+            e.target.value = "";
+          }}
+        />
+        {resume ? (
+          <div className="resume-file">
+            <span className="file-icon" aria-hidden="true">PDF</span>
+            <span>
+              <strong>{resume.filename}</strong>
+              <small>
+                {kb(resume.size)} · added {dateOf(resume.uploaded_at)}
+              </small>
+            </span>
+          </div>
+        ) : (
+          <p className="dash-sub">Upload your resume as a PDF. We read it, rate it against your roles, and tell you what to fix. Max 5 MB.</p>
+        )}
+        <div className="dash-actions">
+          <button type="button" className={resume ? "ghost-btn" : ""} disabled={busy === "uploading" || busy === "deleting"} onClick={() => input.current?.click()}>
+            {busy === "uploading" ? "Uploading…" : resume ? "Replace resume" : "Upload resume"}
+          </button>
+          {resume && (
+            <button type="button" className="linkish step-go" disabled={Boolean(busy)} onClick={remove}>
+              {busy === "deleting" ? "Deleting…" : "Delete"}
+            </button>
+          )}
+        </div>
+        {problem && (
+          <p className="error" role="alert">
+            {problem}
+          </p>
+        )}
+        <p className="dash-sub small-note">Your resume is private. It only goes to a company when you approve an email.</p>
+      </section>
+
+      {resume && (
+        <section className="card dash-card">
+          <h2>
+            Your score <span className="pill grey">Early version</span>
+          </h2>
+          {!rating ? (
+            <p className="dash-sub">{busy === "rating" ? "Reading your resume…" : "We could not rate your resume. Try again in a moment."}</p>
+          ) : (
+            <>
+              <div className="score-row">
+                <div className={rating.score >= 75 ? "score good" : rating.score >= 55 ? "score ok" : "score low"} aria-label={`Score ${rating.score} out of 100`}>
+                  <strong>{rating.score}</strong>
+                  <span>/ 100</span>
+                </div>
+                <p className="dash-sub">
+                  {rating.score >= 75 ? "Strong start. A few tweaks will help." : rating.score >= 55 ? "Decent. The fixes below will lift it most." : "Plenty of room to grow. Start with the first fix."}
+                </p>
+              </div>
+
+              {rating.roles.length > 0 && (
+                <>
+                  <h3 className="sub-h">Fit for your roles</h3>
+                  <ul className="fit-list">
+                    {rating.roles.map((r) => (
+                      <li key={r.role}>
+                        <span>{r.role}</span>
+                        <span className="fit-bar" aria-hidden="true">
+                          <span style={{ width: `${r.fit}%` }} />
+                        </span>
+                        <strong>{r.fit}%</strong>
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              )}
+
+              {rating.gaps.length > 0 && (
+                <>
+                  <h3 className="sub-h">Top fixes</h3>
+                  <ol className="fix-list">
+                    {rating.gaps.map((g) => (
+                      <li key={g}>{g}</li>
+                    ))}
+                  </ol>
+                </>
+              )}
+
+              {rating.strengths.length > 0 && (
+                <>
+                  <h3 className="sub-h">Already working</h3>
+                  <ul className="good-list">
+                    {rating.strengths.map((g) => (
+                      <li key={g}>{g}</li>
+                    ))}
+                  </ul>
+                </>
+              )}
+              <p className="dash-sub small-note">This early score checks structure and keywords. The AI rating per company arrives with the full app.</p>
+            </>
+          )}
+        </section>
+      )}
+    </>
   );
 }
 

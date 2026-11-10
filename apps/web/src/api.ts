@@ -60,7 +60,10 @@ export type EventName =
   | "welcome_view"
   | "dashboard_view"
   | "profile_edited"
-  | "assistant_message";
+  | "assistant_message"
+  | "resume_uploaded"
+  | "resume_rated"
+  | "resume_deleted";
 
 export function track(name: EventName, source?: string): void {
   fetch(`${BASE}/events`, {
@@ -99,7 +102,9 @@ export async function saveProfile(input: Record<string, unknown>): Promise<boole
   }
 }
 
-export type Me = { email: string; profile: Profile | null; pro: boolean; plan: "monthly" | "term" | null; renews_at: number | null };
+export type ResumeInfo = { filename: string; size: number; uploaded_at: number };
+
+export type Me = { email: string; resume: ResumeInfo | null; profile: Profile | null; pro: boolean; plan: "monthly" | "term" | null; renews_at: number | null };
 
 // Temporary: looks the student up by email until sign-in exists. The API refuses this in production.
 export async function getMe(email: string): Promise<Me | "unavailable" | "error"> {
@@ -148,5 +153,52 @@ export async function getAdminOverview(key: string): Promise<AdminOverview | "un
     return (await res.json()) as AdminOverview;
   } catch {
     return "error";
+  }
+}
+
+// Resume. One PDF per student. The API keeps the file and its text, and can rate it against the student's roles.
+export type Rating = {
+  score: number;
+  roles: { role: string; fit: number; matched: string[] }[];
+  gaps: string[];
+  strengths: string[];
+  method: "rules" | "ai";
+};
+
+export type UploadResult = { resume: ResumeInfo } | { error: "not_pdf" | "no_text" | "too_big" | "error" };
+
+export async function uploadResume(email: string, file: File): Promise<UploadResult> {
+  try {
+    const form = new FormData();
+    form.set("email", email);
+    form.set("file", file);
+    const res = await fetch(`${BASE}/resume`, { method: "POST", body: form });
+    if (res.ok) return { resume: ((await res.json()) as { resume: ResumeInfo }).resume };
+    const code = ((await res.json().catch(() => ({}))) as { error?: string }).error;
+    return { error: code === "not_pdf" || code === "no_text" || code === "too_big" ? code : "error" };
+  } catch {
+    return { error: "error" };
+  }
+}
+
+export async function rateResume(email: string): Promise<Rating | null> {
+  try {
+    const res = await fetch(`${BASE}/resume/rate`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email }),
+    });
+    return res.ok ? ((await res.json()) as { rating: Rating }).rating : null;
+  } catch {
+    return null;
+  }
+}
+
+export async function deleteResume(email: string): Promise<boolean> {
+  try {
+    const res = await fetch(`${BASE}/resume?email=${encodeURIComponent(email)}`, { method: "DELETE" });
+    return res.ok;
+  } catch {
+    return false;
   }
 }
