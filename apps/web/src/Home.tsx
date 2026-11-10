@@ -135,7 +135,7 @@ export default function Home() {
             <button
               type="button"
               className="cta"
-              onClick={() => document.getElementById("early-access")?.scrollIntoView({ behavior: "smooth" })}
+              onClick={() => { window.location.hash = "#/signup"; }}
             >
               Get started
             </button>

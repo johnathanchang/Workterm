@@ -33,7 +33,6 @@ const PRODUCT_LINKS = [
   { id: "profile", label: "Set up your profile" },
   { id: "compare", label: "How Workterm compares" },
   { id: "faq", label: "Questions" },
-  { id: "early-access", label: "Get started" },
 ];
 
 function goToSection(e: React.MouseEvent, id: string) {
@@ -151,6 +150,7 @@ export default function App() {
                 {l.label}
               </a>
             ))}
+            <a href="#/signup">Get started</a>
           </nav>
           <nav className="footcol" aria-labelledby="foot-compare">
             <h2 id="foot-compare">Compare</h2>

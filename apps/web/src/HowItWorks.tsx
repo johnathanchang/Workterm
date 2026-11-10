@@ -10,13 +10,13 @@ const Check = () => (
   </svg>
 );
 
-// Same call to action as the hero: scrolls to the early access form.
+// Same call to action as the hero: goes to sign up.
 const StartButton = () => (
   <div className="showcase-cta">
     <button
       type="button"
       className="cta"
-      onClick={() => document.getElementById("early-access")?.scrollIntoView({ behavior: "smooth" })}
+      onClick={() => { window.location.hash = "#/signup"; }}
     >
       Get started
     </button>

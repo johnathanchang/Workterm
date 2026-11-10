@@ -24,7 +24,6 @@ type Step =
   | "roles"
   | "term"
   | "where"
-  | "privacy"
   | "resume"
   | "analyzing"
   | "matches"
@@ -47,7 +46,6 @@ const QUESTIONS: { key: Step; section: string }[] = [
   { key: "roles", section: "Your goals" },
   { key: "term", section: "Your goals" },
   { key: "where", section: "Your goals" },
-  { key: "privacy", section: "Your resume" },
   { key: "resume", section: "Your resume" },
 ];
 
@@ -681,29 +679,6 @@ export default function Onboarding() {
                 <input value={where} onChange={(e) => setWhere(e.target.value)} placeholder="Like Calgary, or Remote" maxLength={100} />
               </label>
               <Nav back={back} next={where.trim() ? "Continue" : "Skip"} />
-            </form>
-          )}
-
-          {step === "privacy" && (
-            <form className="stack" onSubmit={onSubmit(true)}>
-              <p className="eyebrow-small">Almost there</p>
-              <h1 className="authtitle">Thanks for trusting us{first ? `, ${first}` : ""}.</h1>
-              <p className="lead small">Next is your resume. Here is how we treat it and you.</p>
-              <ul className="promises">
-                <li>
-                  <Check /> Nothing is sent until you approve it.
-                </li>
-                <li>
-                  <Check /> Your resume goes to a company only when you say so.
-                </li>
-                <li>
-                  <Check /> We only reword what is true. We never make up experience.
-                </li>
-                <li>
-                  <Check /> We can't promise a placement. We help every application count.
-                </li>
-              </ul>
-              <Nav back={back} />
             </form>
           )}
 

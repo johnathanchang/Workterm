@@ -2410,7 +2410,6 @@ select:focus-visible {
 }
 
 .fix-how svg,
-.promises svg,
 .plan-fixes svg {
   flex: none;
   color: #1f9d55;
@@ -2419,23 +2418,6 @@ select:focus-visible {
 .screen .time-bars {
   margin: 0;
   border: 1px solid var(--line);
-}
-
-/* "Thanks for trusting us": the promises before the resume upload. */
-.promises {
-  display: grid;
-  gap: 10px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  text-align: left;
-}
-
-.promises li {
-  display: flex;
-  align-items: baseline;
-  gap: 10px;
-  font-weight: 600;
 }
 
 /* "Finding your firms…": a big percentage and a bar that fill as the lines tick off. */
