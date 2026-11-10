@@ -7,6 +7,17 @@ import { clearSession, getSessionEmail, setSessionEmail } from "./session";
 const MAX_ROLES = 3;
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+const TABS = [
+  ["overview", "Overview"],
+  ["matches", "Matches"],
+  ["resume", "Resume"],
+  ["applications", "Applications"],
+  ["assistant", "Ask Workterm"],
+  ["preferences", "Preferences"],
+  ["plan", "Plan and billing"],
+] as const;
+type Tab = (typeof TABS)[number][0];
+
 const planName = (plan: Me["plan"]) => (plan === "monthly" ? "Pro Monthly" : "Pro Term");
 const dateOf = (ms: number) => new Date(ms).toLocaleDateString(undefined, { month: "long", day: "numeric", year: "numeric" });
 
@@ -17,6 +28,7 @@ export default function Dashboard({ welcome }: { welcome: boolean }) {
   const [me, setMe] = useState<Me | null>(null);
   const [problem, setProblem] = useState<"" | "unavailable" | "error">("");
   const [loading, setLoading] = useState(Boolean(email));
+  const [tab, setTab] = useState<Tab>("overview");
 
   // Load the student. Right after paying, Stripe's message may take a few seconds to arrive, so on the welcome page
   // we ask again (up to 8 times) until the plan shows as active.
@@ -102,15 +114,47 @@ export default function Dashboard({ welcome }: { welcome: boolean }) {
         </button>
       </div>
 
-      {welcome && <GettingStarted me={me} />}
+      <div className="dash-shell">
+        <nav className="dash-nav" aria-label="Dashboard pages">
+          {TABS.map(([key, label]) => (
+            <button
+              type="button"
+              key={key}
+              className={tab === key ? "dash-tab on" : "dash-tab"}
+              aria-current={tab === key ? "page" : undefined}
+              onClick={() => {
+                setTab(key);
+                window.scrollTo({ top: 0 });
+              }}
+            >
+              {label}
+            </button>
+          ))}
+        </nav>
 
-      <div className="dash-grid">
-        <PlanCard me={me} welcome={welcome} />
-        <Stats />
-        {profile && <Preferences email={me.email} profile={profile} onSaved={(p) => setMe({ ...me, profile: p })} />}
-        {profile && <Matches profile={profile} />}
-        <ResumeCard />
-        <Assistant profile={profile} />
+        <div className="dash-page">
+          {tab === "overview" && (
+            <>
+              <GettingStarted me={me} go={setTab} />
+              <div className="dash-grid">
+                <PlanCard me={me} welcome={welcome} />
+                <Stats />
+                {profile && <Matches profile={profile} limit={3} onMore={() => setTab("matches")} />}
+              </div>
+            </>
+          )}
+          {tab === "matches" && (profile ? <Matches profile={profile} limit={8} /> : <Empty text="Finish onboarding to see your matches." />)}
+          {tab === "resume" && <ResumeCard />}
+          {tab === "applications" && <Stats />}
+          {tab === "assistant" && <Assistant profile={profile} />}
+          {tab === "preferences" &&
+            (profile ? (
+              <Preferences email={me.email} profile={profile} onSaved={(p) => setMe({ ...me, profile: p })} />
+            ) : (
+              <Empty text="Finish onboarding to set your preferences." />
+            ))}
+          {tab === "plan" && <PlanCard me={me} welcome={welcome} />}
+        </div>
       </div>
     </main>
   );
@@ -148,16 +192,30 @@ function EmailGate({ onEmail }: { onEmail: (email: string) => void }) {
   );
 }
 
-function GettingStarted({ me }: { me: Me }) {
-  const steps = [
-    { done: me.pro, label: "Payment confirmed", note: me.pro ? `${planName(me.plan)} is on.` : "Confirming with Stripe, this takes a few seconds…" },
-    { done: Boolean(me.profile?.jobs.length), label: "Your roles are saved", note: me.profile?.jobs.join(", ") || "Pick your roles below." },
-    { done: false, label: "Add your resume", note: "Coming next. We will rate it against each role." },
+function Empty({ text }: { text: string }) {
+  return (
+    <section className="card dash-card">
+      <p className="dash-sub">{text}</p>
+    </section>
+  );
+}
+
+function GettingStarted({ me, go }: { me: Me; go: (t: Tab) => void }) {
+  const steps: { done: boolean; label: string; note: string; tab?: Tab }[] = [
+    { done: me.pro, label: "Payment confirmed", note: me.pro ? `${planName(me.plan)} is on.` : "Confirming with Stripe, this takes a few seconds…", tab: "plan" },
+    { done: Boolean(me.profile?.jobs.length), label: "Your roles are saved", note: me.profile?.jobs.join(", ") || "Pick your roles in Preferences.", tab: "preferences" },
+    { done: false, label: "Add your resume", note: "Coming next. We will rate it against each role.", tab: "resume" },
     { done: false, label: "Connect Gmail or Outlook", note: "Coming next. Emails go from your own inbox, only after you approve." },
   ];
+  const doneCount = steps.filter((s) => s.done).length;
   return (
     <section className="card dash-card welcome-card">
-      <h2>Your first steps</h2>
+      <h2>
+        Your first steps <span className="pill grey">{doneCount} of {steps.length}</span>
+      </h2>
+      <div className="step-bar" aria-hidden="true">
+        <span style={{ width: `${(doneCount / steps.length) * 100}%` }} />
+      </div>
       <ol className="checklist">
         {steps.map((s) => (
           <li key={s.label} className={s.done ? "done" : ""}>
@@ -168,6 +226,11 @@ function GettingStarted({ me }: { me: Me }) {
               <strong>{s.label}</strong>
               <small>{s.note}</small>
             </span>
+            {!s.done && s.tab && (
+              <button type="button" className="linkish step-go" onClick={() => go(s.tab!)}>
+                Open
+              </button>
+            )}
           </li>
         ))}
       </ol>
@@ -323,8 +386,8 @@ function Preferences({ email, profile, onSaved }: { email: string; profile: Prof
   );
 }
 
-function Matches({ profile }: { profile: Profile }) {
-  const matches = exampleMatches(profile.jobs, profile.place ?? "", profile.program ?? "").slice(0, 4);
+function Matches({ profile, limit, onMore }: { profile: Profile; limit: number; onMore?: () => void }) {
+  const matches = exampleMatches(profile.jobs, profile.place ?? "", profile.program ?? "").slice(0, limit);
   return (
     <section className="card dash-card dash-wide">
       <h2>Your matches</h2>
@@ -345,6 +408,11 @@ function Matches({ profile }: { profile: Profile }) {
           </li>
         ))}
       </ol>
+      {onMore && (
+        <button type="button" className="linkish step-go" onClick={onMore}>
+          See all matches
+        </button>
+      )}
     </section>
   );
 }

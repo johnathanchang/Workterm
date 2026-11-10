@@ -2531,6 +2531,74 @@ main.dash {
   font-weight: 600;
 }
 
+.dash-shell {
+  display: grid;
+  grid-template-columns: 200px minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+
+.dash-nav {
+  position: sticky;
+  top: 16px;
+  display: grid;
+  gap: 4px;
+}
+
+.dash-tab {
+  text-align: left;
+  background: transparent;
+  color: var(--ink);
+  border: 0;
+  border-radius: 12px;
+  padding: 10px 14px;
+  font-weight: 600;
+  box-shadow: none;
+}
+
+.dash-tab:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.dash-tab.on {
+  background: var(--card);
+  color: #3b0000;
+}
+
+.dash-page {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+
+.step-bar {
+  height: 6px;
+  margin: 12px 0 16px;
+  border-radius: 999px;
+  background: var(--line);
+  overflow: hidden;
+}
+
+.step-bar span {
+  display: block;
+  height: 100%;
+  background: #1d6b2f;
+  transition: width 0.3s ease;
+}
+
+.checklist li > span:nth-child(2) {
+  flex: 1;
+}
+
+.linkish.step-go {
+  color: var(--accent);
+  background: none;
+  text-decoration: underline;
+  font-weight: 700;
+  padding: 4px 0;
+  box-shadow: none;
+}
+
 .dash-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -2777,6 +2845,21 @@ main.dash {
 }
 
 @media (max-width: 720px) {
+  .dash-shell {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .dash-nav {
+    position: static;
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+  }
+  .dash-tab {
+    flex: none;
+    white-space: nowrap;
+    padding: 8px 12px;
+  }
   .dash-grid,
   .dash-row {
     grid-template-columns: 1fr;
